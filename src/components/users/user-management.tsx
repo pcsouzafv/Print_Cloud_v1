@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,92 +14,47 @@ import {
   Users, 
   Crown,
   FileText,
-  DollarSign
+  DollarSign,
+  AlertCircle
 } from 'lucide-react';
-
-// Mock data - será substituído pela API real
-const mockUsers = [
-  {
-    id: '1',
-    name: 'João Silva',
-    email: 'joao.silva@empresa.com',
-    department: 'Administração',
-    role: 'USER',
-    azureId: 'azure-1',
-    monthlyQuota: 500,
-    currentUsage: 234,
-    colorQuota: 100,
-    colorUsage: 45,
-    totalCost: 23.40,
-    lastPrint: '2024-01-23T14:30:00',
-    status: 'active'
-  },
-  {
-    id: '2',
-    name: 'Maria Santos',
-    email: 'maria.santos@empresa.com',
-    department: 'Marketing',
-    role: 'MANAGER',
-    azureId: 'azure-2',
-    monthlyQuota: 1000,
-    currentUsage: 678,
-    colorQuota: 300,
-    colorUsage: 189,
-    totalCost: 89.50,
-    lastPrint: '2024-01-23T16:15:00',
-    status: 'active'
-  },
-  {
-    id: '3',
-    name: 'Carlos Oliveira',
-    email: 'carlos.oliveira@empresa.com',
-    department: 'Vendas',
-    role: 'USER',
-    azureId: 'azure-3',
-    monthlyQuota: 800,
-    currentUsage: 756,
-    colorQuota: 200,
-    colorUsage: 198,
-    totalCost: 145.30,
-    lastPrint: '2024-01-23T17:45:00',
-    status: 'active'
-  },
-  {
-    id: '4',
-    name: 'Ana Costa',
-    email: 'ana.costa@empresa.com',
-    department: 'Financeiro',
-    role: 'ADMIN',
-    azureId: 'azure-4',
-    monthlyQuota: 1500,
-    currentUsage: 423,
-    colorQuota: 500,
-    colorUsage: 67,
-    totalCost: 56.78,
-    lastPrint: '2024-01-23T13:20:00',
-    status: 'active'
-  },
-  {
-    id: '5',
-    name: 'Pedro Almeida',
-    email: 'pedro.almeida@empresa.com',
-    department: 'TI',
-    role: 'USER',
-    azureId: 'azure-5',
-    monthlyQuota: 300,
-    currentUsage: 298,
-    colorQuota: 50,
-    colorUsage: 49,
-    totalCost: 45.67,
-    lastPrint: '2024-01-22T11:30:00',
-    status: 'quota_exceeded'
-  }
-];
+import { apiClient } from '@/lib/api-client';
 
 export default function UserManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [departmentFilter, setDepartmentFilter] = useState('all');
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const response = await apiClient.getUsers({
+        search: searchTerm,
+        role: roleFilter,
+        department: departmentFilter
+      });
+      setUsers((response as any).users || []);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao carregar usuários');
+      console.error('Error fetching users:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchUsers();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm, roleFilter, departmentFilter]);
 
   const getRoleIcon = (role: string) => {
     switch (role) {
@@ -149,18 +104,13 @@ export default function UserManagement() {
     return <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Normal</span>;
   };
 
-  const departments = Array.from(new Set(mockUsers.map(user => user.department)));
+  const departments = Array.from(new Set(users.map(user => user.department)));
 
-  const filteredUsers = mockUsers.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.department.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-    const matchesDepartment = departmentFilter === 'all' || user.department === departmentFilter;
-    return matchesSearch && matchesRole && matchesDepartment;
-  });
+  // Since filtering is now done server-side, we just use the users array
+  const filteredUsers = users;
 
-  const formatLastPrint = (dateString: string) => {
+  const formatLastPrint = (dateString: string | null) => {
+    if (!dateString) return 'Nunca';
     const date = new Date(dateString);
     return new Intl.DateTimeFormat('pt-BR', {
       day: '2-digit',
@@ -234,7 +184,7 @@ export default function UserManagement() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Total Usuários</p>
-                <p className="text-2xl font-bold">{mockUsers.length}</p>
+                <p className="text-2xl font-bold">{users.length}</p>
               </div>
               <Users className="text-blue-500" size={24} />
             </div>
@@ -246,7 +196,7 @@ export default function UserManagement() {
               <div>
                 <p className="text-sm text-gray-600">Administradores</p>
                 <p className="text-2xl font-bold text-purple-600">
-                  {mockUsers.filter(u => u.role === 'ADMIN').length}
+                  {users.filter(u => u.role === 'ADMIN').length}
                 </p>
               </div>
               <Crown className="text-purple-500" size={24} />
@@ -258,7 +208,9 @@ export default function UserManagement() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Impressões Hoje</p>
-                <p className="text-2xl font-bold text-green-600">1,234</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {users.reduce((sum, user) => sum + (user.printJobsCount || 0), 0)}
+                </p>
               </div>
               <FileText className="text-green-500" size={24} />
             </div>
@@ -269,7 +221,9 @@ export default function UserManagement() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Custo Total</p>
-                <p className="text-2xl font-bold text-orange-600">R$ 360,65</p>
+                <p className="text-2xl font-bold text-orange-600">
+                  R$ {users.reduce((sum, user) => sum + (user.totalCost || 0), 0).toFixed(2)}
+                </p>
               </div>
               <DollarSign className="text-orange-500" size={24} />
             </div>
@@ -277,9 +231,26 @@ export default function UserManagement() {
         </Card>
       </div>
 
+      {/* Loading and Error States */}
+      {loading && (
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="text-gray-500 mt-4">Carregando usuários...</p>
+        </div>
+      )}
+
+      {error && (
+        <div className="text-center py-12">
+          <AlertCircle className="mx-auto text-red-400 mb-4" size={48} />
+          <p className="text-red-500 text-lg">{error}</p>
+          <Button onClick={fetchUsers} className="mt-4">Tentar Novamente</Button>
+        </div>
+      )}
+
       {/* Users Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        {filteredUsers.map((user) => {
+      {!loading && !error && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          {filteredUsers.map((user) => {
           const bwPercentage = getUsagePercentage(user.currentUsage, user.monthlyQuota);
           const colorPercentage = getUsagePercentage(user.colorUsage, user.colorQuota);
           
@@ -371,10 +342,11 @@ export default function UserManagement() {
               </CardContent>
             </Card>
           );
-        })}
-      </div>
+          })}
+        </div>
+      )}
 
-      {filteredUsers.length === 0 && (
+      {!loading && !error && filteredUsers.length === 0 && (
         <div className="text-center py-12">
           <Users className="mx-auto text-gray-400 mb-4" size={48} />
           <p className="text-gray-500 text-lg">Nenhum usuário encontrado</p>

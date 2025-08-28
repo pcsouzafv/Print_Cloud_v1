@@ -33,6 +33,7 @@ class ApiClient {
   async getPrinters(params?: {
     department?: string;
     status?: string;
+    search?: string;
     page?: number;
     limit?: number;
   }) {
@@ -74,6 +75,7 @@ class ApiClient {
   async getUsers(params?: {
     department?: string;
     role?: string;
+    search?: string;
     page?: number;
     limit?: number;
   }) {
@@ -131,6 +133,56 @@ class ApiClient {
     isColor: boolean;
   }) {
     return this.request('/print-jobs', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // AI Services API
+  async getAIAnalysis(params?: {
+    period?: number;
+    department?: string;
+    userId?: string;
+  }) {
+    const searchParams = new URLSearchParams();
+    
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) {
+          searchParams.append(key, value.toString());
+        }
+      });
+    }
+
+    const query = searchParams.toString();
+    return this.request(`/ai/analysis${query ? `?${query}` : ''}`);
+  }
+
+  async getAIRecommendations(params?: {
+    department?: string;
+    userId?: string;
+    type?: 'general' | 'cost' | 'sustainability' | 'efficiency';
+  }) {
+    const searchParams = new URLSearchParams();
+    
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) {
+          searchParams.append(key, value.toString());
+        }
+      });
+    }
+
+    const query = searchParams.toString();
+    return this.request(`/ai/recommendations${query ? `?${query}` : ''}`);
+  }
+
+  async sendAIMessage(data: {
+    message: string;
+    userId?: string;
+    includeContext?: boolean;
+  }) {
+    return this.request('/ai/chat', {
       method: 'POST',
       body: JSON.stringify(data),
     });

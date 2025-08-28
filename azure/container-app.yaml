@@ -42,6 +42,14 @@ spec:
         value: "" # Senha do Azure Container Registry
       - name: azure-ad-client-secret
         value: "" # Opcional: se usar client secret
+      - name: azure-openai-endpoint
+        value: "" # Endpoint do Azure OpenAI Service
+      - name: azure-openai-api-key
+        value: "" # API Key do Azure OpenAI Service
+      - name: azure-text-analytics-endpoint
+        value: "" # Endpoint do Azure Text Analytics
+      - name: azure-text-analytics-api-key
+        value: "" # API Key do Azure Text Analytics
     
     # Configuração ativa/inativa
     activeRevisionsMode: single
@@ -96,6 +104,10 @@ spec:
           - name: NEXT_PUBLIC_AZURE_AD_TENANT_ID  
             value: "" # Configurar via deploy
           
+          # Azure AI configuração
+          - name: AZURE_OPENAI_DEPLOYMENT_NAME
+            value: "gpt-35-turbo"
+          
           # Segredos (referências)
           - name: DATABASE_URL
             secretRef: database-url
@@ -103,6 +115,14 @@ spec:
             secretRef: redis-url  
           - name: NEXTAUTH_SECRET
             secretRef: nextauth-secret
+          - name: AZURE_OPENAI_ENDPOINT
+            secretRef: azure-openai-endpoint
+          - name: AZURE_OPENAI_API_KEY
+            secretRef: azure-openai-api-key
+          - name: AZURE_TEXT_ANALYTICS_ENDPOINT
+            secretRef: azure-text-analytics-endpoint
+          - name: AZURE_TEXT_ANALYTICS_API_KEY
+            secretRef: azure-text-analytics-api-key
         
         # Health checks
         probes:

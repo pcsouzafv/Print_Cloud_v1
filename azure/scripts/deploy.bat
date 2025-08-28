@@ -123,6 +123,17 @@ if "%AZURE_AD_TENANT_ID%"=="" (
     exit /b 1
 )
 
+REM Verificar variáveis opcionais de IA Azure (opcional para funcionalidade completa)
+if "%AZURE_OPENAI_ENDPOINT%"=="" (
+    echo ⚠️  AZURE_OPENAI_ENDPOINT não configurado - IA funcionará com dados simulados
+    set AZURE_OPENAI_ENDPOINT=mock-endpoint
+    set AZURE_OPENAI_API_KEY=mock-key
+    set AZURE_TEXT_ANALYTICS_ENDPOINT=mock-endpoint
+    set AZURE_TEXT_ANALYTICS_API_KEY=mock-key
+) else (
+    echo ✅ Azure AI Services configurados
+)
+
 REM Criar Key Vault
 echo 🔐 Configurando Azure Key Vault...
 az keyvault show --name %KEYVAULT_NAME% --resource-group %RESOURCE_GROUP% >nul 2>&1
@@ -226,6 +237,10 @@ az keyvault secret set --vault-name %KEYVAULT_NAME% --name "database-url" --valu
 az keyvault secret set --vault-name %KEYVAULT_NAME% --name "redis-url" --value "%REDIS_URL%" >nul
 az keyvault secret set --vault-name %KEYVAULT_NAME% --name "db-password" --value "%DB_PASSWORD%" >nul
 az keyvault secret set --vault-name %KEYVAULT_NAME% --name "nextauth-secret" --value "%NEXTAUTH_SECRET%" >nul
+az keyvault secret set --vault-name %KEYVAULT_NAME% --name "azure-openai-endpoint" --value "%AZURE_OPENAI_ENDPOINT%" >nul
+az keyvault secret set --vault-name %KEYVAULT_NAME% --name "azure-openai-api-key" --value "%AZURE_OPENAI_API_KEY%" >nul
+az keyvault secret set --vault-name %KEYVAULT_NAME% --name "azure-text-analytics-endpoint" --value "%AZURE_TEXT_ANALYTICS_ENDPOINT%" >nul
+az keyvault secret set --vault-name %KEYVAULT_NAME% --name "azure-text-analytics-api-key" --value "%AZURE_TEXT_ANALYTICS_API_KEY%" >nul
 echo ✅ Segredos armazenados no Key Vault
 echo.
 
@@ -272,10 +287,15 @@ if errorlevel 1 (
             NODE_ENV=production ^
             NEXT_PUBLIC_AZURE_AD_CLIENT_ID=%AZURE_AD_CLIENT_ID% ^
             NEXT_PUBLIC_AZURE_AD_TENANT_ID=%AZURE_AD_TENANT_ID% ^
+            AZURE_OPENAI_DEPLOYMENT_NAME=gpt-35-turbo ^
         --secrets ^
             database-url="%DATABASE_URL%" ^
             redis-url="%REDIS_URL%" ^
-            nextauth-secret="%NEXTAUTH_SECRET%"
+            nextauth-secret="%NEXTAUTH_SECRET%" ^
+            azure-openai-endpoint="%AZURE_OPENAI_ENDPOINT%" ^
+            azure-openai-api-key="%AZURE_OPENAI_API_KEY%" ^
+            azure-text-analytics-endpoint="%AZURE_TEXT_ANALYTICS_ENDPOINT%" ^
+            azure-text-analytics-api-key="%AZURE_TEXT_ANALYTICS_API_KEY%"
     if errorlevel 1 (
         echo ❌ Erro ao criar Container App
         pause
@@ -291,7 +311,8 @@ if errorlevel 1 (
         --set-env-vars ^
             NODE_ENV=production ^
             NEXT_PUBLIC_AZURE_AD_CLIENT_ID=%AZURE_AD_CLIENT_ID% ^
-            NEXT_PUBLIC_AZURE_AD_TENANT_ID=%AZURE_AD_TENANT_ID%
+            NEXT_PUBLIC_AZURE_AD_TENANT_ID=%AZURE_AD_TENANT_ID% ^
+            AZURE_OPENAI_DEPLOYMENT_NAME=gpt-35-turbo
     if errorlevel 1 (
         echo ❌ Erro ao atualizar Container App
         pause

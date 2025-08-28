@@ -6,19 +6,29 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const department = searchParams.get('department');
     const status = searchParams.get('status');
+    const search = searchParams.get('search');
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
+    const limit = parseInt(searchParams.get('limit') || '100');
 
     const skip = (page - 1) * limit;
 
     const where: any = {};
     
-    if (department) {
+    if (department && department !== 'all') {
       where.department = department;
     }
     
-    if (status) {
+    if (status && status !== 'all') {
       where.status = status;
+    }
+
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { location: { contains: search, mode: 'insensitive' } },
+        { department: { contains: search, mode: 'insensitive' } },
+        { model: { contains: search, mode: 'insensitive' } },
+      ];
     }
 
     const [printers, total] = await Promise.all([
@@ -27,12 +37,38 @@ export async function GET(request: NextRequest) {
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
+        include: {
+          printJobs: {
+            where: {
+              submittedAt: {
+                gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+              }
+            },
+            select: {
+              pages: true,
+              copies: true,
+            }
+          }
+        }
       }),
       prisma.printer.count({ where }),
     ]);
 
+    // Calculate current usage for each printer
+    const printersWithUsage = printers.map(printer => {
+      const currentUsage = printer.printJobs.reduce((total, job) => {
+        return total + (job.pages * job.copies);
+      }, 0);
+
+      const { printJobs, ...printerData } = printer;
+      return {
+        ...printerData,
+        currentUsage
+      };
+    });
+
     return NextResponse.json({
-      printers,
+      printers: printersWithUsage,
       pagination: {
         page,
         limit,

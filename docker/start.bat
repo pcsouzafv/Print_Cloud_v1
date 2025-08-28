@@ -49,12 +49,19 @@ echo 🎉 Ambiente Docker iniciado com sucesso!
 echo.
 echo 📋 Serviços disponíveis:
 echo 🌐 Aplicação: http://localhost:3000
+echo 🤖 Assistente IA: Integrado na aplicação
 echo 🗄️ Adminer (DB): http://localhost:8080
 echo    - Sistema: PostgreSQL
 echo    - Servidor: postgres
 echo    - Usuário: printcloud
 echo    - Senha: printcloud123
 echo    - Base: printcloud
+echo.
+echo 🤖 Recursos de IA:
+echo   ✅ Assistente conversacional
+echo   ✅ Análise de padrões inteligente
+echo   ✅ Recomendações personalizadas
+echo   ℹ️  Usando dados simulados (configure Azure AI para produção)
 echo.
 echo 📊 Para ver logs:
 echo docker-compose logs -f app

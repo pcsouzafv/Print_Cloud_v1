@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMsal } from '@azure/msal-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,12 +13,16 @@ import {
   LogOut,
   Home,
   BarChart3,
-  Shield
+  Shield,
+  Brain
 } from 'lucide-react';
 import PrinterManagement from '@/components/printers/printer-management';
 import UserManagement from '@/components/users/user-management';
+import AIInsights from '@/components/ai/ai-insights';
+import AIAssistant from '@/components/ai/ai-assistant';
+import { apiClient } from '@/lib/api-client';
 
-type ActiveSection = 'dashboard' | 'printers' | 'users' | 'reports' | 'settings';
+type ActiveSection = 'dashboard' | 'printers' | 'users' | 'ai-insights' | 'reports' | 'settings';
 
 export default function Dashboard() {
   const { instance, accounts } = useMsal();
@@ -36,6 +40,7 @@ export default function Dashboard() {
     { id: 'dashboard', label: 'Dashboard', icon: Home },
     { id: 'printers', label: 'Impressoras', icon: Printer },
     { id: 'users', label: 'Usuários', icon: Users },
+    { id: 'ai-insights', label: 'Insights IA', icon: Brain },
     { id: 'reports', label: 'Relatórios', icon: BarChart3 },
     { id: 'settings', label: 'Configurações', icon: Settings },
   ];
@@ -46,6 +51,8 @@ export default function Dashboard() {
         return <PrinterManagement />;
       case 'users':
         return <UserManagement />;
+      case 'ai-insights':
+        return <AIInsights userId={user?.localAccountId} department={user?.username?.split('@')[1]} />;
       case 'reports':
         return <div className="p-6">Relatórios em desenvolvimento...</div>;
       case 'settings':
@@ -114,37 +121,81 @@ export default function Dashboard() {
           {renderContent()}
         </main>
       </div>
+
+      {/* AI Assistant - Always available */}
+      <AIAssistant 
+        userId={user?.localAccountId} 
+        department={user?.username?.split('@')[1]}
+      />
     </div>
   );
 }
 
 function DashboardContent() {
+  const [stats, setStats] = useState({
+    totalPrinters: 0,
+    activePrinters: 0,
+    totalUsers: 0,
+    totalJobs: 0,
+    totalCost: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const [printersResponse, usersResponse] = await Promise.all([
+        apiClient.getPrinters(),
+        apiClient.getUsers()
+      ]);
+
+      const printers = (printersResponse as any).printers || [];
+      const users = (usersResponse as any).users || [];
+
+      setStats({
+        totalPrinters: printers.length,
+        activePrinters: printers.filter((p: any) => p.status === 'ACTIVE').length,
+        totalUsers: users.length,
+        totalJobs: users.reduce((sum: number, user: any) => sum + (user.printJobsCount || 0), 0),
+        totalCost: users.reduce((sum: number, user: any) => sum + (user.totalCost || 0), 0)
+      });
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const statsCards = [
     {
       title: 'Impressoras Ativas',
-      value: '24',
-      description: '2 em manutenção',
+      value: loading ? '...' : `${stats.activePrinters}`,
+      description: `${stats.totalPrinters - stats.activePrinters} em manutenção/erro`,
       icon: Printer,
       color: 'text-blue-600',
     },
     {
       title: 'Usuários Ativos',
-      value: '156',
-      description: '12 novos este mês',
+      value: loading ? '...' : `${stats.totalUsers}`,
+      description: 'Total de usuários',
       icon: Users,
       color: 'text-green-600',
     },
     {
-      title: 'Impressões Hoje',
-      value: '1,234',
-      description: '+12% vs ontem',
+      title: 'Impressões do Mês',
+      value: loading ? '...' : `${stats.totalJobs.toLocaleString()}`,
+      description: 'Total de jobs processados',
       icon: FileText,
       color: 'text-purple-600',
     },
     {
       title: 'Custo Mensal',
-      value: 'R$ 2.847',
-      description: '-5% vs mês anterior',
+      value: loading ? '...' : `R$ ${stats.totalCost.toFixed(2)}`,
+      description: 'Custo total das impressões',
       icon: DollarSign,
       color: 'text-orange-600',
     },

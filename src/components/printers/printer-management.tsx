@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Search, 
   Filter, 
@@ -15,62 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProgressBar } from '@/components/ui/progress-bar';
-
-// Mock data - será substituído pela API real
-const mockPrinters = [
-  {
-    id: '1',
-    name: 'HP LaserJet Pro M404dn',
-    model: 'M404dn',
-    location: 'Administração - 1º Andar',
-    ipAddress: '192.168.1.101',
-    status: 'ACTIVE',
-    department: 'Administração',
-    isColorPrinter: false,
-    monthlyQuota: 5000,
-    currentUsage: 2340,
-    lastMaintenance: '2024-01-15'
-  },
-  {
-    id: '2',
-    name: 'Canon ImageRunner C3226i',
-    model: 'C3226i',
-    location: 'Marketing - 2º Andar',
-    ipAddress: '192.168.1.102',
-    status: 'MAINTENANCE',
-    department: 'Marketing',
-    isColorPrinter: true,
-    monthlyQuota: 3000,
-    currentUsage: 1250,
-    lastMaintenance: '2024-01-20'
-  },
-  {
-    id: '3',
-    name: 'Xerox VersaLink C405',
-    model: 'C405',
-    location: 'Vendas - 1º Andar',
-    ipAddress: '192.168.1.103',
-    status: 'ERROR',
-    department: 'Vendas',
-    isColorPrinter: true,
-    monthlyQuota: 4000,
-    currentUsage: 3800,
-    lastMaintenance: '2024-01-10'
-  },
-  {
-    id: '4',
-    name: 'Brother HL-L6400DW',
-    model: 'HL-L6400DW',
-    location: 'Financeiro - 1º Andar',
-    ipAddress: '192.168.1.104',
-    status: 'ACTIVE',
-    department: 'Financeiro',
-    isColorPrinter: false,
-    monthlyQuota: 6000,
-    currentUsage: 4200,
-    lastMaintenance: '2024-01-18'
-  }
-];
+import { apiClient } from '@/lib/api-client';
 
 declare module 'react' {
   interface CSSProperties {
@@ -90,6 +35,37 @@ const progressBarStyle = `
 export default function PrinterManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [printers, setPrinters] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchPrinters();
+  }, []);
+
+  const fetchPrinters = async () => {
+    try {
+      setLoading(true);
+      const response = await apiClient.getPrinters({
+        search: searchTerm,
+        status: statusFilter
+      });
+      setPrinters((response as any).printers || []);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao carregar impressoras');
+      console.error('Error fetching printers:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchPrinters();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm, statusFilter]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -129,13 +105,8 @@ export default function PrinterManagement() {
     return 'bg-green-500';
   };
 
-  const filteredPrinters = mockPrinters.filter(printer => {
-    const matchesSearch = printer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         printer.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         printer.department.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || printer.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  // Since filtering is now done server-side, we just use the printers array
+  const filteredPrinters = printers;
 
   return (
     <div className="p-6 space-y-6">
@@ -191,7 +162,7 @@ export default function PrinterManagement() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Total</p>
-                <p className="text-2xl font-bold">{mockPrinters.length}</p>
+                <p className="text-2xl font-bold">{printers.length}</p>
               </div>
               <Printer className="text-blue-500" size={24} />
             </div>
@@ -203,7 +174,7 @@ export default function PrinterManagement() {
               <div>
                 <p className="text-sm text-gray-600">Ativas</p>
                 <p className="text-2xl font-bold text-green-600">
-                  {mockPrinters.filter(p => p.status === 'ACTIVE').length}
+                  {printers.filter(p => p.status === 'ACTIVE').length}
                 </p>
               </div>
               <CheckCircle className="text-green-500" size={24} />
@@ -216,7 +187,7 @@ export default function PrinterManagement() {
               <div>
                 <p className="text-sm text-gray-600">Manutenção</p>
                 <p className="text-2xl font-bold text-yellow-600">
-                  {mockPrinters.filter(p => p.status === 'MAINTENANCE').length}
+                  {printers.filter(p => p.status === 'MAINTENANCE').length}
                 </p>
               </div>
               <AlertCircle className="text-yellow-500" size={24} />
@@ -229,7 +200,7 @@ export default function PrinterManagement() {
               <div>
                 <p className="text-sm text-gray-600">Com Erro</p>
                 <p className="text-2xl font-bold text-red-600">
-                  {mockPrinters.filter(p => p.status === 'ERROR').length}
+                  {printers.filter(p => p.status === 'ERROR').length}
                 </p>
               </div>
               <XCircle className="text-red-500" size={24} />
@@ -238,9 +209,26 @@ export default function PrinterManagement() {
         </Card>
       </div>
 
+      {/* Loading and Error States */}
+      {loading && (
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="text-gray-500 mt-4">Carregando impressoras...</p>
+        </div>
+      )}
+
+      {error && (
+        <div className="text-center py-12">
+          <AlertCircle className="mx-auto text-red-400 mb-4" size={48} />
+          <p className="text-red-500 text-lg">{error}</p>
+          <Button onClick={fetchPrinters} className="mt-4">Tentar Novamente</Button>
+        </div>
+      )}
+
       {/* Printers Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredPrinters.map((printer) => {
+      {!loading && !error && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredPrinters.map((printer) => {
           const usagePercentage = getUsagePercentage(printer.currentUsage, printer.monthlyQuota);
           
           return (
@@ -319,10 +307,11 @@ export default function PrinterManagement() {
               </CardContent>
             </Card>
           );
-        })}
-      </div>
+          })}
+        </div>
+      )}
 
-      {filteredPrinters.length === 0 && (
+      {!loading && !error && filteredPrinters.length === 0 && (
         <div className="text-center py-12">
           <Printer className="mx-auto text-gray-400 mb-4" size={48} />
           <p className="text-gray-500 text-lg">Nenhuma impressora encontrada</p>
