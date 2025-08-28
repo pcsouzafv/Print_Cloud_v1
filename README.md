@@ -40,6 +40,13 @@ Sistema completo de gestão de impressoras e bilhetagem empresarial integrado co
 - Histórico de impressões
 - Tendências de consumo
 
+### 🤖 Assistente Inteligente com IA
+- **Chatbot conversacional** integrado no dashboard
+- **Análise inteligente** de padrões de impressão
+- **Recomendações personalizadas** para otimização de custos
+- **Insights automáticos** sobre sustentabilidade e eficiência
+- Powered by **Azure OpenAI Service** e **Azure Text Analytics**
+
 ## 🛠️ Tecnologias Utilizadas
 
 ### Frontend
@@ -54,13 +61,16 @@ Sistema completo de gestão de impressoras e bilhetagem empresarial integrado co
 - **Prisma** - ORM e migrations
 - **PostgreSQL** - Banco de dados
 
-### Autenticação
+### Autenticação & IA
 - **Microsoft Authentication Library (MSAL)** - Azure AD
 - **Azure AD B2B/B2C** - Gerenciamento de usuários
+- **Azure OpenAI Service** - Assistente IA conversacional
+- **Azure Text Analytics** - Análise de sentimento e padrões
 
 ### Infraestrutura
-- **Vercel** - Deploy e hospedagem
+- **Azure Container Apps** - Deploy e hospedagem
 - **Azure Database for PostgreSQL** - Banco em produção
+- **Docker** - Containerização para desenvolvimento
 
 ## 🚀 Instalação e Configuração
 
@@ -79,7 +89,11 @@ docker\start.bat
 chmod +x docker/start.sh && ./docker/start.sh
 ```
 
-Acesse: `http://localhost:3000`
+**Recursos incluídos:**
+- 🌐 Aplicação completa em `http://localhost:3000`
+- 🤖 **Assistente IA integrado** (dados simulados)
+- 🗄️ Base de dados PostgreSQL + Redis
+- 📊 Dashboard com análises inteligentes
 
 📖 **[Guia completo Docker](DOCKER.md)**
 
@@ -117,6 +131,12 @@ DATABASE_URL="postgresql://username:password@localhost:5432/printcloud?schema=pu
 # Azure AD Configuration
 NEXT_PUBLIC_AZURE_AD_CLIENT_ID="your-azure-ad-client-id"
 NEXT_PUBLIC_AZURE_AD_TENANT_ID="your-azure-ad-tenant-id"
+
+# Azure AI Services (Opcional - sem configuração usa dados simulados)
+AZURE_OPENAI_ENDPOINT="https://seu-openai.openai.azure.com/"
+AZURE_OPENAI_API_KEY="sua-api-key"
+AZURE_TEXT_ANALYTICS_ENDPOINT="https://seu-text-analytics.cognitiveservices.azure.com/"
+AZURE_TEXT_ANALYTICS_API_KEY="sua-api-key"
 ```
 
 ### 4. Configure o banco de dados
@@ -188,6 +208,10 @@ Na seção "API permissions", adicione:
 export AZURE_AD_CLIENT_ID="seu-client-id"
 export AZURE_AD_TENANT_ID="seu-tenant-id"
 
+# Opcional: Configurar serviços de IA para funcionalidade completa
+export AZURE_OPENAI_ENDPOINT="https://seu-openai.openai.azure.com/"
+export AZURE_OPENAI_API_KEY="sua-api-key"
+
 # Windows
 azure\scripts\deploy.bat
 
@@ -209,6 +233,8 @@ Azure AD ←→ Container Apps ←→ PostgreSQL + Redis + Key Vault
 - **Azure Cache for Redis** - Cache e sessões  
 - **Azure Container Registry** - Registry de imagens
 - **Azure Key Vault** - Gerenciamento de segredos
+- **Azure OpenAI Service** - IA conversacional
+- **Azure Text Analytics** - Análise inteligente
 - **Azure Front Door** - CDN + WAF (produção)
 
 **Custo estimado:** ~$170-240/mês
@@ -225,6 +251,8 @@ Azure AD ←→ Container Apps ←→ PostgreSQL + Redis + Key Vault
 - [x] Sistema de cotas
 - [x] Deploy Docker local
 - [x] Deploy Azure Cloud
+- [x] **🤖 Assistente IA conversacional**
+- [x] **📊 Análises inteligentes e recomendações**
 
 ### Fase 2 - Bilhetagem Avançada
 - [ ] API de integração com impressoras
@@ -232,6 +260,8 @@ Azure AD ←→ Container Apps ←→ PostgreSQL + Redis + Key Vault
 - [ ] Relatórios avançados
 - [ ] Notificações automáticas
 - [ ] Application Insights
+- [ ] **🧠 IA preditiva para manutenção**
+- [ ] **📈 Análise de tendências com ML**
 
 ### Fase 3 - Enterprise
 - [ ] Multi-tenancy
