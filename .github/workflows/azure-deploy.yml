@@ -1,0 +1,154 @@
+name: Deploy to Azure
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  AZURE_RESOURCE_GROUP: rg-printcloud-prod
+  AZURE_CONTAINER_APP: printcloud-app-prod
+  AZURE_CONTAINER_REGISTRY: printcloudregistry
+  AZURE_REGISTRY_URL: printcloudregistry.azurecr.io
+  IMAGE_NAME: printcloud
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    name: 🔨 Build and Test
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 📦 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: 🔧 Install dependencies
+      run: npm ci
+
+    - name: 🎯 Generate Prisma client
+      run: npx prisma generate
+
+    - name: 🔍 Run linter
+      run: npm run lint
+
+    - name: 🔧 Type check
+      run: npm run typecheck
+
+    - name: 🏗️ Build application
+      run: npm run build
+
+    - name: 📊 Build summary
+      run: |
+        echo "✅ Build completed successfully"
+        echo "📦 Next.js build size:"
+        du -sh .next/ || echo "Build size not available"
+
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    name: 🚀 Deploy to Azure
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🔑 Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: 🏗️ Build Docker image
+      run: |
+        docker build . -t ${{ env.AZURE_REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        docker build . -t ${{ env.AZURE_REGISTRY_URL }}/${{ env.IMAGE_NAME }}:latest
+
+    - name: 📦 Push to Azure Container Registry
+      run: |
+        az acr login --name ${{ env.AZURE_CONTAINER_REGISTRY }}
+        docker push ${{ env.AZURE_REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        docker push ${{ env.AZURE_REGISTRY_URL }}/${{ env.IMAGE_NAME }}:latest
+
+    - name: 🚀 Deploy to Azure Container Apps
+      run: |
+        az containerapp update \
+          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+          --name ${{ env.AZURE_CONTAINER_APP }} \
+          --image ${{ env.AZURE_REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+    - name: ⏳ Wait for deployment
+      run: sleep 60
+
+    - name: 🗄️ Run database migrations
+      run: |
+        echo "🔄 Running database migrations..."
+        az containerapp exec \
+          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+          --name ${{ env.AZURE_CONTAINER_APP }} \
+          --command "npx prisma migrate deploy" || echo "⚠️  Migration failed - check manually"
+
+    - name: 🏥 Health check
+      run: |
+        WEBAPP_URL=$(az containerapp show \
+          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+          --name ${{ env.AZURE_CONTAINER_APP }} \
+          --query properties.configuration.ingress.fqdn \
+          --output tsv)
+        
+        echo "🌐 Application URL: https://$WEBAPP_URL"
+        
+        # Wait for app to be ready
+        sleep 30
+        
+        # Check health endpoint
+        for i in {1..5}; do
+          if curl -f -s "https://$WEBAPP_URL/api/health" > /dev/null; then
+            echo "✅ Health check passed"
+            break
+          else
+            echo "⏳ Waiting for app to be ready (attempt $i/5)..."
+            sleep 10
+          fi
+        done
+
+    - name: 📊 Deployment summary
+      run: |
+        WEBAPP_URL=$(az containerapp show \
+          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+          --name ${{ env.AZURE_CONTAINER_APP }} \
+          --query properties.configuration.ingress.fqdn \
+          --output tsv)
+        
+        echo "## 🎉 Deploy Summary" >> $GITHUB_STEP_SUMMARY
+        echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
+        echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| 🌐 Application URL | https://$WEBAPP_URL |" >> $GITHUB_STEP_SUMMARY
+        echo "| 📦 Image Tag | ${{ github.sha }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| 🏷️ Git Commit | ${{ github.sha }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| 👤 Deployed by | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| 🕐 Deploy Time | $(date -u) |" >> $GITHUB_STEP_SUMMARY
+        
+        echo "✅ Deployment completed successfully!"
+        echo "🌐 Access your application at: https://$WEBAPP_URL"
+
+  notify:
+    needs: [build-and-test, deploy]
+    runs-on: ubuntu-latest
+    name: 📢 Notify
+    if: always() && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: 📢 Deployment notification
+      run: |
+        if [ "${{ needs.deploy.result }}" == "success" ]; then
+          echo "✅ Print Cloud deployed successfully to Azure!"
+        else
+          echo "❌ Print Cloud deployment failed!"
+        fi

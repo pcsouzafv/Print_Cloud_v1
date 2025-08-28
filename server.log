@@ -1,0 +1,53 @@
+
+> print-cloud-v1@0.1.0 dev
+> next dev
+
+  ▲ Next.js 14.2.5
+  - Local:        http://localhost:3000
+  - Environments: .env
+
+ ✓ Starting...
+ ✓ Ready in 2.8s
+ ○ Compiling /api/printer-integration/status/system ...
+ ✓ Compiled /api/printer-integration/status/system in 623ms (58 modules)
+Error fetching system status: PrismaClientInitializationError: 
+Invalid `prisma.printer.count()` invocation:
+
+
+Authentication failed against database server at `localhost`, the provided database credentials for `printcloud` are not valid.
+
+Please make sure to provide valid database credentials for the database server at `localhost`.
+    at $n.handleRequestError (E:\Projetos_DevOps\Print_Cloud_v1\node_modules\@prisma\client\runtime\library.js:121:7615)
+    at $n.handleAndLogRequestError (E:\Projetos_DevOps\Print_Cloud_v1\node_modules\@prisma\client\runtime\library.js:121:6623)
+    at $n.request (E:\Projetos_DevOps\Print_Cloud_v1\node_modules\@prisma\client\runtime\library.js:121:6307)
+    at async l (E:\Projetos_DevOps\Print_Cloud_v1\node_modules\@prisma\client\runtime\library.js:130:9633)
+    at async Promise.all (index 0)
+    at async GET (webpack-internal:///(rsc)/./src/app/api/printer-integration/status/system/route.ts:15:121)
+    at async E:\Projetos_DevOps\Print_Cloud_v1\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:55038
+    at async ek.execute (E:\Projetos_DevOps\Print_Cloud_v1\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:45808)
+    at async ek.handle (E:\Projetos_DevOps\Print_Cloud_v1\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:6:56292)
+    at async doRender (E:\Projetos_DevOps\Print_Cloud_v1\node_modules\next\dist\server\base-server.js:1377:42)
+    at async cacheEntry.responseCache.get.routeKind (E:\Projetos_DevOps\Print_Cloud_v1\node_modules\next\dist\server\base-server.js:1599:28)
+    at async DevServer.renderToResponseWithComponentsImpl (E:\Projetos_DevOps\Print_Cloud_v1\node_modules\next\dist\server\base-server.js:1507:28)
+    at async DevServer.renderPageComponent (E:\Projetos_DevOps\Print_Cloud_v1\node_modules\next\dist\server\base-server.js:1931:24)
+    at async DevServer.renderToResponseImpl (E:\Projetos_DevOps\Print_Cloud_v1\node_modules\next\dist\server\base-server.js:1969:32)
+    at async DevServer.pipeImpl (E:\Projetos_DevOps\Print_Cloud_v1\node_modules\next\dist\server\base-server.js:920:25)
+    at async NextNodeServer.handleCatchallRenderRequest (E:\Projetos_DevOps\Print_Cloud_v1\node_modules\next\dist\server\next-server.js:272:17)
+    at async DevServer.handleRequestImpl (E:\Projetos_DevOps\Print_Cloud_v1\node_modules\next\dist\server\base-server.js:816:17)
+    at async E:\Projetos_DevOps\Print_Cloud_v1\node_modules\next\dist\server\dev\next-dev-server.js:339:20
+    at async Span.traceAsyncFn (E:\Projetos_DevOps\Print_Cloud_v1\node_modules\next\dist\trace\trace.js:154:20)
+    at async DevServer.handleRequest (E:\Projetos_DevOps\Print_Cloud_v1\node_modules\next\dist\server\dev\next-dev-server.js:336:24)
+    at async invokeRender (E:\Projetos_DevOps\Print_Cloud_v1\node_modules\next\dist\server\lib\router-server.js:174:21)
+    at async handleRequest (E:\Projetos_DevOps\Print_Cloud_v1\node_modules\next\dist\server\lib\router-server.js:353:24)
+    at async requestHandlerImpl (E:\Projetos_DevOps\Print_Cloud_v1\node_modules\next\dist\server\lib\router-server.js:377:13)
+    at async Server.requestListener (E:\Projetos_DevOps\Print_Cloud_v1\node_modules\next\dist\server\lib\start-server.js:141:13) {
+  clientVersion: '5.22.0',
+  errorCode: undefined
+}
+ GET /api/printer-integration/status/system 500 in 918ms
+ ✓ Compiled /api/printer-integration/polling in 128ms (60 modules)
+ GET /api/printer-integration/polling 200 in 186ms
+ ○ Compiling / ...
+ ✓ Compiled / in 5.9s (895 modules)
+ GET / 200 in 6424ms
+ ✓ Compiled in 560ms (428 modules)

@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: printcloud-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: printcloud
+      POSTGRES_USER: printcloud
+      POSTGRES_PASSWORD: printcloud123
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - printcloud-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U printcloud -d printcloud"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis for caching (optional)
+  redis:
+    image: redis:7-alpine
+    container_name: printcloud-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - printcloud-network
+    command: redis-server --requirepass redis123
+
+  # Next.js Application
+  app:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: printcloud-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://printcloud:printcloud123@postgres:5432/printcloud?schema=public
+      - NEXT_PUBLIC_AZURE_AD_CLIENT_ID=${AZURE_AD_CLIENT_ID}
+      - NEXT_PUBLIC_AZURE_AD_TENANT_ID=${AZURE_AD_TENANT_ID}
+      - NEXTAUTH_URL=http://localhost:3000
+      - NEXTAUTH_SECRET=your-secret-key-change-in-production
+    ports:
+      - "3000:3000"
+    networks:
+      - printcloud-network
+    volumes:
+      - app_uploads:/app/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Adminer for database management (development only)
+  adminer:
+    image: adminer:latest
+    container_name: printcloud-adminer
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    ports:
+      - "8080:8080"
+    networks:
+      - printcloud-network
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+      ADMINER_DESIGN: pepa-linha-dark
+
+volumes:
+  postgres_data:
+    driver: local
+  app_uploads:
+    driver: local
+
+networks:
+  printcloud-network:
+    driver: bridge

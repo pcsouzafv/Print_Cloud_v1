@@ -1,0 +1,241 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  name        String
+  department  String
+  role        Role     @default(USER)
+  azureId     String   @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  printJobs          PrintJob[]
+  printQuotas        PrintQuota[]
+  auditLogs          AuditLog[]
+  capturedJobs       PrintJobCapture[]
+  apiTokens          ApiToken[]
+  
+  managedDepartments Department[] @relation("DepartmentManager")
+
+  @@map("users")
+}
+
+model Printer {
+  id             String        @id @default(cuid())
+  name           String
+  model          String
+  location       String
+  ipAddress      String        @unique
+  status         PrinterStatus @default(ACTIVE)
+  serialNumber   String        @unique
+  department     String
+  isColorPrinter Boolean       @default(false)
+  monthlyQuota   Int           @default(1000)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  printJobs        PrintJob[]
+  integrations     PrinterIntegration[]
+  capturedJobs     PrintJobCapture[]
+  statusHistory    PrinterStatusHistory[]
+
+  @@map("printers")
+}
+
+model PrintJob {
+  id          String         @id @default(cuid())
+  userId      String
+  printerId   String
+  fileName    String
+  pages       Int
+  copies      Int
+  isColor     Boolean        @default(false)
+  cost        Float
+  status      PrintJobStatus @default(PENDING)
+  submittedAt DateTime       @default(now())
+  completedAt DateTime?
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  printer Printer @relation(fields: [printerId], references: [id], onDelete: Cascade)
+
+  @@map("print_jobs")
+}
+
+model PrintQuota {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  department   String
+  monthlyLimit Int
+  currentUsage Int      @default(0)
+  colorLimit   Int
+  colorUsage   Int      @default(0)
+  resetDate    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("print_quotas")
+}
+
+model Department {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  budget       Float
+  monthlyQuota Int
+  colorQuota   Int
+  managerId    String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  manager User @relation("DepartmentManager", fields: [managerId], references: [id])
+
+  @@map("departments")
+}
+
+model PrintCost {
+  id                String   @id @default(cuid())
+  department        String   @unique
+  blackAndWhitePage Float
+  colorPage         Float
+  updatedAt         DateTime @updatedAt
+
+  @@map("print_costs")
+}
+
+model AuditLog {
+  id        String            @id @default(cuid())
+  userId    String
+  action    String
+  entity    String
+  entityId  String
+  details   Json
+  timestamp DateTime          @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("audit_logs")
+}
+
+enum Role {
+  ADMIN
+  USER
+  MANAGER
+}
+
+enum PrinterStatus {
+  ACTIVE
+  INACTIVE
+  MAINTENANCE
+  ERROR
+}
+
+enum PrintJobStatus {
+  PENDING
+  PRINTING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model PrinterIntegration {
+  id           String              @id @default(cuid())
+  printerId    String
+  type         IntegrationType
+  endpoint     String
+  authType     AuthenticationType
+  credentials  Json?
+  pollInterval Int                 @default(300)
+  isActive     Boolean             @default(true)
+  lastSync     DateTime?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  printer Printer @relation(fields: [printerId], references: [id], onDelete: Cascade)
+
+  @@unique([printerId, type])
+  @@map("printer_integrations")
+}
+
+model PrintJobCapture {
+  id            String            @id @default(cuid())
+  printerId     String
+  externalJobId String
+  fileName      String
+  pages         Int
+  copies        Int
+  isColor       Boolean           @default(false)
+  paperSize     String
+  paperType     String
+  quality       String
+  status        CaptureStatus     @default(CAPTURED)
+  capturedAt    DateTime          @default(now())
+  processedAt   DateTime?
+  userId        String?
+  metadata      Json?
+
+  printer Printer @relation(fields: [printerId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([printerId, externalJobId])
+  @@map("print_job_captures")
+}
+
+model PrinterStatusHistory {
+  id              String    @id @default(cuid())
+  printerId       String
+  status          String
+  tonerLevels     Json?
+  paperLevels     Json?
+  errorMessages   String[]
+  jobQueue        Int       @default(0)
+  totalPagesMonth Int       @default(0)
+  timestamp       DateTime  @default(now())
+
+  printer Printer @relation(fields: [printerId], references: [id], onDelete: Cascade)
+
+  @@map("printer_status_history")
+}
+
+enum IntegrationType {
+  SNMP
+  HTTP
+  IPP
+  WSD
+}
+
+enum AuthenticationType {
+  NONE
+  BASIC
+  API_KEY
+  CERTIFICATE
+}
+
+enum CaptureStatus {
+  CAPTURED
+  PROCESSED
+  ERROR
+}
+
+model ApiToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  name      String
+  userId    String
+  expiresAt DateTime
+  lastUsed  DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("api_tokens")
+}

@@ -1,0 +1,176 @@
+# Azure Container Apps Configuration
+# Este arquivo define a configuração completa da aplicação
+
+apiVersion: apps/v1
+kind: ContainerApp
+metadata:
+  name: printcloud-app-prod
+  resourceGroup: rg-printcloud-prod
+  location: Brazil South
+
+spec:
+  # Configuração do ambiente
+  environmentId: /subscriptions/{subscription-id}/resourceGroups/rg-printcloud-prod/providers/Microsoft.App/managedEnvironments/printcloud-env-prod
+  
+  # Configuração da aplicação
+  configuration:
+    # Configuração de ingress
+    ingress:
+      external: true
+      targetPort: 3000
+      transport: http
+      allowInsecure: false
+      traffic:
+        - weight: 100
+          latestRevision: true
+      
+    # Configuração do registry
+    registries:
+      - server: printcloudregistry.azurecr.io
+        username: printcloudregistry
+        passwordSecretRef: registry-password
+    
+    # Configuração de segredos
+    secrets:
+      - name: database-url
+        value: "" # Será configurado via Key Vault ou deploy script
+      - name: redis-url
+        value: "" # Será configurado via Key Vault ou deploy script
+      - name: nextauth-secret
+        value: "" # Será configurado via Key Vault ou deploy script
+      - name: registry-password
+        value: "" # Senha do Azure Container Registry
+      - name: azure-ad-client-secret
+        value: "" # Opcional: se usar client secret
+    
+    # Configuração ativa/inativa
+    activeRevisionsMode: single
+    
+  # Template da aplicação
+  template:
+    # Configuração de escalonamento
+    scale:
+      minReplicas: 1
+      maxReplicas: 10
+      rules:
+        # Escalonamento baseado em HTTP
+        - name: http-scaling
+          http:
+            metadata:
+              concurrentRequests: "30"
+        # Escalonamento baseado em CPU
+        - name: cpu-scaling
+          custom:
+            type: cpu
+            metadata:
+              type: Utilization
+              value: "70"
+    
+    # Configuração do container
+    containers:
+      - name: printcloud-app
+        image: printcloudregistry.azurecr.io/printcloud:latest
+        
+        # Recursos do container
+        resources:
+          cpu: 1.0
+          memory: 2.0Gi
+        
+        # Variáveis de ambiente
+        env:
+          # Configuração da aplicação
+          - name: NODE_ENV
+            value: production
+          - name: PORT
+            value: "3000"
+          - name: HOSTNAME
+            value: "0.0.0.0"
+          
+          # URLs públicas (serão substituídas)
+          - name: NEXTAUTH_URL
+            value: "https://printcloud-app-prod.brazilsouth-01.azurecontainerapps.io"
+          
+          # Azure AD configuração
+          - name: NEXT_PUBLIC_AZURE_AD_CLIENT_ID
+            value: "" # Configurar via deploy
+          - name: NEXT_PUBLIC_AZURE_AD_TENANT_ID  
+            value: "" # Configurar via deploy
+          
+          # Segredos (referências)
+          - name: DATABASE_URL
+            secretRef: database-url
+          - name: REDIS_URL
+            secretRef: redis-url  
+          - name: NEXTAUTH_SECRET
+            secretRef: nextauth-secret
+        
+        # Health checks
+        probes:
+          # Liveness probe - verifica se o container está funcionando
+          - type: liveness
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          
+          # Readiness probe - verifica se está pronto para receber tráfego
+          - type: readiness
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          
+          # Startup probe - verifica se a aplicação inicializou
+          - type: startup
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 10
+
+# Configuração adicional para monitoramento
+monitoring:
+  # Application Insights
+  applicationInsights:
+    enabled: true
+    connectionString: "" # Será configurado se habilitado
+  
+  # Logs
+  logs:
+    level: info
+    format: json
+    destinations:
+      - name: log-analytics
+        type: log-analytics
+        workspaceId: "" # ID do workspace do Log Analytics
+
+# Configuração de rede (opcional)
+networking:
+  # Se usar VNET integration
+  # vnetConfiguration:
+  #   internal: false
+  #   subnetId: /subscriptions/{subscription}/resourceGroups/{rg}/providers/Microsoft.Network/virtualNetworks/{vnet}/subnets/{subnet}
+
+# Configuração de identidade gerenciada (opcional)
+identity:
+  type: SystemAssigned
+  # userAssignedIdentities:
+  #   /subscriptions/{subscription}/resourceGroups/{rg}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/{identity}: {}
+
+# Configuração de revisões
+revisionSuffix: v1
+
+# Tags
+tags:
+  environment: production
+  application: printcloud
+  owner: devops-team
+  cost-center: it-department
