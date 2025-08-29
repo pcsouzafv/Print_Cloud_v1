@@ -10,12 +10,14 @@ import {
   MoreVertical, 
   AlertCircle, 
   CheckCircle, 
-  XCircle
+  XCircle,
+  Network
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { apiClient } from '@/lib/api-client';
+import PrinterDiscoveryModal from './printer-discovery-modal';
 
 declare module 'react' {
   interface CSSProperties {
@@ -38,6 +40,8 @@ export default function PrinterManagement() {
   const [printers, setPrinters] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showDiscoveryModal, setShowDiscoveryModal] = useState(false);
+  const [showManualModal, setShowManualModal] = useState(false);
 
   useEffect(() => {
     fetchPrinters();
@@ -66,6 +70,24 @@ export default function PrinterManagement() {
     }, 300);
     return () => clearTimeout(timer);
   }, [searchTerm, statusFilter]);
+
+  const handleAddPrinter = async (printerData: any) => {
+    try {
+      await apiClient.createPrinter({
+        name: printerData.name,
+        ipAddress: printerData.ip,
+        model: printerData.model,
+        manufacturer: printerData.manufacturer,
+        location: printerData.location || 'Não especificado',
+        department: printerData.department || 'Geral',
+        status: printerData.status === 'online' ? 'ACTIVE' : 'OFFLINE'
+      });
+      fetchPrinters(); // Refresh the list
+    } catch (error) {
+      console.error('Error adding printer:', error);
+      setError('Erro ao adicionar impressora');
+    }
+  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -116,10 +138,16 @@ export default function PrinterManagement() {
           <h2 className="text-2xl font-bold text-gray-900">Gestão de Impressoras</h2>
           <p className="text-gray-600">Monitore e gerencie todas as impressoras da empresa</p>
         </div>
-        <Button>
-          <Plus size={16} className="mr-2" />
-          Nova Impressora
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setShowDiscoveryModal(true)}>
+            <Network size={16} className="mr-2" />
+            Descobrir na Rede
+          </Button>
+          <Button variant="outline" onClick={() => setShowManualModal(true)}>
+            <Plus size={16} className="mr-2" />
+            Adicionar Manual
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -296,11 +324,11 @@ export default function PrinterManagement() {
                 </div>
 
                 <div className="pt-2 border-t flex space-x-2">
-                  <Button variant="outline" size="sm" className="flex-1">
+                  <Button variant="outline" size="sm" className="flex-1" onClick={() => alert('Configuração de impressora em desenvolvimento')}>
                     <Settings size={14} className="mr-1" />
                     Configurar
                   </Button>
-                  <Button variant="outline" size="sm" className="flex-1">
+                  <Button variant="outline" size="sm" className="flex-1" onClick={() => alert('Detalhes da impressora em desenvolvimento')}>
                     Ver Detalhes
                   </Button>
                 </div>
@@ -318,6 +346,130 @@ export default function PrinterManagement() {
           <p className="text-gray-400 text-sm">Tente ajustar os filtros ou adicionar uma nova impressora</p>
         </div>
       )}
+
+      {/* Manual Printer Modal */}
+      {showManualModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Adicionar Impressora Manual</h2>
+              <Button variant="outline" onClick={() => setShowManualModal(false)}>
+                ✕
+              </Button>
+            </div>
+            
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              const printerData = {
+                name: formData.get('name') as string,
+                ip: formData.get('ip') as string,
+                model: formData.get('model') as string,
+                manufacturer: formData.get('manufacturer') as string,
+                location: formData.get('location') as string,
+                department: formData.get('department') as string,
+                status: 'online'
+              };
+              handleAddPrinter(printerData);
+              setShowManualModal(false);
+            }} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Nome da Impressora *</label>
+                <input
+                  name="name"
+                  type="text"
+                  required
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="Ex: HP LaserJet Pro - Sala 101"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-1">Endereço IP *</label>
+                <input
+                  name="ip"
+                  type="text"
+                  required
+                  pattern="^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="192.168.1.100"
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Fabricante</label>
+                  <select
+                    name="manufacturer"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Selecionar...</option>
+                    <option value="HP">HP</option>
+                    <option value="Canon">Canon</option>
+                    <option value="Epson">Epson</option>
+                    <option value="Brother">Brother</option>
+                    <option value="Samsung">Samsung</option>
+                    <option value="Xerox">Xerox</option>
+                    <option value="Outro">Outro</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-1">Modelo</label>
+                  <input
+                    name="model"
+                    type="text"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="LaserJet Pro"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-1">Localização</label>
+                <input
+                  name="location"
+                  type="text"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="Sala 101, 2º Andar"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-1">Departamento</label>
+                <select
+                  name="department"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Selecionar...</option>
+                  <option value="Geral">Geral</option>
+                  <option value="Marketing">Marketing</option>
+                  <option value="Vendas">Vendas</option>
+                  <option value="RH">RH</option>
+                  <option value="Financeiro">Financeiro</option>
+                  <option value="TI">TI</option>
+                </select>
+              </div>
+              
+              <div className="flex gap-3 pt-4 border-t">
+                <Button type="button" variant="outline" onClick={() => setShowManualModal(false)} className="flex-1">
+                  Cancelar
+                </Button>
+                <Button type="submit" className="flex-1">
+                  Adicionar Impressora
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Printer Discovery Modal */}
+      <PrinterDiscoveryModal
+        isOpen={showDiscoveryModal}
+        onClose={() => setShowDiscoveryModal(false)}
+        onAddPrinter={handleAddPrinter}
+      />
     </div>
   );
 }

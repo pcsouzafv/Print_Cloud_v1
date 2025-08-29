@@ -187,6 +187,44 @@ class ApiClient {
       body: JSON.stringify(data),
     });
   }
+
+  // Reports API
+  async getReports(params?: {
+    dateRange?: number;
+    reportType?: string;
+  }) {
+    const searchParams = new URLSearchParams();
+    
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) {
+          searchParams.append(key, value.toString());
+        }
+      });
+    }
+
+    const query = searchParams.toString();
+    return this.request(`/reports${query ? `?${query}` : ''}`);
+  }
+
+  // Settings API
+  async getSettings() {
+    return this.request('/settings');
+  }
+
+  async updateSettings(settings: any) {
+    return this.request('/settings', {
+      method: 'PUT',
+      body: JSON.stringify(settings),
+    });
+  }
+
+  async getSettingSection(section: string) {
+    return this.request('/settings', {
+      method: 'POST',
+      body: JSON.stringify({ section }),
+    });
+  }
 }
 
 export const apiClient = new ApiClient();

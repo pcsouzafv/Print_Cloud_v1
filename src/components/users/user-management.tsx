@@ -26,6 +26,7 @@ export default function UserManagement() {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -55,6 +56,22 @@ export default function UserManagement() {
     }, 300);
     return () => clearTimeout(timer);
   }, [searchTerm, roleFilter, departmentFilter]);
+
+  const handleAddUser = async (userData: any) => {
+    try {
+      await apiClient.createUser({
+        name: userData.name,
+        email: userData.email,
+        department: userData.department,
+        role: userData.role,
+        monthlyQuota: parseInt(userData.monthlyQuota) || 1000
+      });
+      fetchUsers(); // Refresh the list
+    } catch (error) {
+      console.error('Error adding user:', error);
+      setError('Erro ao adicionar usuário');
+    }
+  };
 
   const getRoleIcon = (role: string) => {
     switch (role) {
@@ -128,7 +145,7 @@ export default function UserManagement() {
           <h2 className="text-2xl font-bold text-gray-900">Gestão de Usuários</h2>
           <p className="text-gray-600">Monitore cotas, custos e atividade dos usuários</p>
         </div>
-        <Button>
+        <Button onClick={() => setShowAddUserModal(true)}>
           <Plus size={16} className="mr-2" />
           Novo Usuário
         </Button>
@@ -332,10 +349,10 @@ export default function UserManagement() {
                 </div>
 
                 <div className="pt-2 border-t flex space-x-2">
-                  <Button variant="outline" size="sm" className="flex-1">
+                  <Button variant="outline" size="sm" className="flex-1" onClick={() => alert('Edição de cotas em desenvolvimento')}>
                     Editar Cotas
                   </Button>
-                  <Button variant="outline" size="sm" className="flex-1">
+                  <Button variant="outline" size="sm" className="flex-1" onClick={() => alert('Histórico do usuário em desenvolvimento')}>
                     Ver Histórico
                   </Button>
                 </div>
@@ -351,6 +368,108 @@ export default function UserManagement() {
           <Users className="mx-auto text-gray-400 mb-4" size={48} />
           <p className="text-gray-500 text-lg">Nenhum usuário encontrado</p>
           <p className="text-gray-400 text-sm">Tente ajustar os filtros ou adicionar um novo usuário</p>
+        </div>
+      )}
+
+      {/* Add User Modal */}
+      {showAddUserModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Adicionar Novo Usuário</h2>
+              <Button variant="outline" onClick={() => setShowAddUserModal(false)}>
+                ✕
+              </Button>
+            </div>
+            
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              const userData = {
+                name: formData.get('name') as string,
+                email: formData.get('email') as string,
+                department: formData.get('department') as string,
+                role: formData.get('role') as string,
+                monthlyQuota: formData.get('monthlyQuota') as string
+              };
+              handleAddUser(userData);
+              setShowAddUserModal(false);
+            }} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Nome Completo *</label>
+                <input
+                  name="name"
+                  type="text"
+                  required
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="Ex: João Silva"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-1">Email *</label>
+                <input
+                  name="email"
+                  type="email"
+                  required
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="joao.silva@empresa.com"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-1">Departamento *</label>
+                <select
+                  name="department"
+                  required
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Selecionar...</option>
+                  <option value="Geral">Geral</option>
+                  <option value="Marketing">Marketing</option>
+                  <option value="Vendas">Vendas</option>
+                  <option value="RH">RH</option>
+                  <option value="Financeiro">Financeiro</option>
+                  <option value="TI">TI</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-1">Função *</label>
+                <select
+                  name="role"
+                  required
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Selecionar...</option>
+                  <option value="USER">Usuário</option>
+                  <option value="MANAGER">Gerente</option>
+                  <option value="ADMIN">Administrador</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-1">Cota Mensal (páginas)</label>
+                <input
+                  name="monthlyQuota"
+                  type="number"
+                  min="1"
+                  defaultValue="1000"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="1000"
+                />
+              </div>
+              
+              <div className="flex gap-3 pt-4 border-t">
+                <Button type="button" variant="outline" onClick={() => setShowAddUserModal(false)} className="flex-1">
+                  Cancelar
+                </Button>
+                <Button type="submit" className="flex-1">
+                  Adicionar Usuário
+                </Button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

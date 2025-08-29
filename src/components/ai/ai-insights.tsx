@@ -351,7 +351,7 @@ export default function AIInsights({ department, userId, period = 30 }: AIInsigh
                       </div>
                     </div>
                     <p className="text-gray-600 text-xs mb-2">{rec.description}</p>
-                    <Button variant="outline" size="sm" className="w-full">
+                    <Button variant="outline" size="sm" className="w-full" onClick={() => alert('Detalhes da recomendação em desenvolvimento')}>
                       <ChevronRight size={12} />
                       Ver detalhes
                     </Button>
