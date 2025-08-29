@@ -10,8 +10,8 @@ on:
 env:
   AZURE_RESOURCE_GROUP: rg-printcloud-prod
   AZURE_CONTAINER_APP: printcloud-app-prod
-  AZURE_CONTAINER_REGISTRY: printcloudregistry
-  AZURE_REGISTRY_URL: printcloudregistry.azurecr.io
+  AZURE_CONTAINER_REGISTRY: printcloudregistry1756467509
+  AZURE_REGISTRY_URL: printcloudregistry1756467509.azurecr.io
   IMAGE_NAME: printcloud
 
 jobs:
