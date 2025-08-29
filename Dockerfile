@@ -21,8 +21,8 @@ RUN npx prisma generate
 
 # Build the application with environment variables
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV NEXT_PUBLIC_AZURE_AD_CLIENT_ID=f37521b3-eff4-4c2e-94ac-470c858cde33
-ENV NEXT_PUBLIC_AZURE_AD_TENANT_ID=eac6c00d-e01e-40f8-bb5f-bac6b0ced795
+ENV NEXT_PUBLIC_AZURE_AD_CLIENT_ID=fb7bea67-2fbc-4891-8a13-e01d6bcab417
+ENV NEXT_PUBLIC_AZURE_AD_TENANT_ID=4e478318-c461-4365-8da2-f6b0809542b1
 RUN npm run build
 
 # Remove dev dependencies
