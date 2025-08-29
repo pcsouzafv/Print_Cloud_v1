@@ -245,10 +245,12 @@ Azure AD ←→ Container Apps ←→ PostgreSQL + Redis + Key Vault
 
 ### Fase 1 - Funcionalidades Básicas ✅
 - [x] Autenticação Azure AD
-- [x] Gestão de impressoras
-- [x] Gestão de usuários
+- [x] Gestão de impressoras com descoberta por IP
+- [x] Gestão de usuários com interface completa
 - [x] Dashboard básico
 - [x] Sistema de cotas
+- [x] **📊 Relatórios avançados com APIs reais**
+- [x] **⚙️ Sistema de configurações persistentes**
 - [x] Deploy Docker local
 - [x] Deploy Azure Cloud
 - [x] **🤖 Assistente IA conversacional**
