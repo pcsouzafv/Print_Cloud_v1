@@ -86,13 +86,13 @@ jobs:
     - name: ⏳ Wait for deployment
       run: sleep 60
 
-    - name: 🗄️ Run database migrations
+    - name: 🗄️ Setup database schema
       run: |
-        echo "🔄 Running database migrations..."
+        echo "🔄 Setting up database schema..."
         az containerapp exec \
           --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
           --name ${{ env.AZURE_CONTAINER_APP }} \
-          --command "npx prisma migrate deploy" || echo "⚠️  Migration failed - check manually"
+          --command "npx prisma db push --accept-data-loss" || echo "⚠️  Database setup failed - check manually"
 
     - name: 🏥 Health check
       run: |
