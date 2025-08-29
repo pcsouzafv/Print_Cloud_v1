@@ -140,13 +140,16 @@ export async function POST(request: NextRequest) {
       );
     }
     
+    // Generate a unique azureId if not provided (temporary fix for migration)
+    const azureId = body.azureId || `manual-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
     const user = await prisma.user.create({
       data: {
         email: body.email,
         name: body.name,
         department: body.department || 'Geral',
         role: body.role || 'USER',
-        azureId: body.azureId || null, // Make azureId optional
+        azureId: azureId,
       },
     });
 
