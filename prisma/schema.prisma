@@ -13,7 +13,7 @@ model User {
   name        String
   department  String
   role        Role     @default(USER)
-  azureId     String   @unique
+  azureId     String?  @unique
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

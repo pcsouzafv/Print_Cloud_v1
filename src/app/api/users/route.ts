@@ -120,13 +120,33 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
+    // Validate required fields
+    if (!body.email || !body.name) {
+      return NextResponse.json(
+        { error: 'Name and email are required' },
+        { status: 400 }
+      );
+    }
+
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email: body.email }
+    });
+
+    if (existingUser) {
+      return NextResponse.json(
+        { error: 'User with this email already exists' },
+        { status: 409 }
+      );
+    }
+    
     const user = await prisma.user.create({
       data: {
         email: body.email,
         name: body.name,
-        department: body.department,
+        department: body.department || 'Geral',
         role: body.role || 'USER',
-        azureId: body.azureId,
+        azureId: body.azureId || null, // Make azureId optional
       },
     });
 
@@ -135,8 +155,8 @@ export async function POST(request: NextRequest) {
       data: {
         userId: user.id,
         department: user.department,
-        monthlyLimit: body.monthlyLimit || 500,
-        colorLimit: body.colorLimit || 100,
+        monthlyLimit: parseInt(body.monthlyQuota) || 1000,
+        colorLimit: Math.floor((parseInt(body.monthlyQuota) || 1000) * 0.2), // 20% of monthly quota for color
         resetDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1),
       },
     });
@@ -144,8 +164,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(user, { status: 201 });
   } catch (error) {
     console.error('Error creating user:', error);
+    
+    // Return more specific error info in development
+    const errorMessage = process.env.NODE_ENV === 'development' 
+      ? `Database error: ${error instanceof Error ? error.message : 'Unknown error'}`
+      : 'Internal server error';
+      
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
