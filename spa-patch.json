@@ -1,0 +1,8 @@
+{
+  "spa": {
+    "redirectUris": [
+      "https://printcloud-app-prod.wittypebble-a8e9df9c.eastus.azurecontainerapps.io",
+      "http://localhost:3000"
+    ]
+  }
+}
