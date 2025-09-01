@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     console.log('🌱 Iniciando seed manual via API...')
 
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     // Executar seed (importar a função main)
     const { exec } = require('child_process')
     
-    return new Promise((resolve) => {
+    return new Promise<NextResponse>((resolve) => {
       exec('npm run db:seed', { cwd: process.cwd() }, (error: any, stdout: string, stderr: string) => {
         if (error) {
           console.error('❌ Erro no seed:', error)
