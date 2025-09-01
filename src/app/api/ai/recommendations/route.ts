@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { generateAIRecommendations } from '@/lib/azure-ai';
-import { getMockRecommendations, isAzureAIConfigured } from '@/lib/mock-ai';
+import { generateAIRecommendations, isAzureAIConfigured, generateCostOptimizationReport, analyzePrintJobSentiment } from '@/lib/azure-ai-simple';
+import { getMockRecommendations } from '@/lib/mock-ai';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,46 +19,132 @@ export async function GET(request: NextRequest) {
       getCostAnalysisData(department, userId),
     ]);
 
-    // Generate recommendations (use mock if Azure AI not configured)
-    let recommendations, specificRecommendations, potentialSavings;
+    // Enhanced AI recommendations with comprehensive analysis
+    let recommendations, specificRecommendations, potentialSavings, costOptimizationReport, sentimentAnalysis;
     
     if (isAzureAIConfigured() && userUsage.length > 0) {
-      // Generate AI-powered recommendations
-      recommendations = await generateAIRecommendations(userUsage, printerStatus, costData);
+      try {
+        // Advanced AI-powered recommendations with business context
+        recommendations = await generateAIRecommendations(userUsage, printerStatus, costData);
 
-      // Add specific recommendations based on type
-      specificRecommendations = await generateSpecificRecommendations(
-        type,
-        userUsage,
-        printerStatus,
-        costData
-      );
+        // Generate specific recommendations based on type
+        specificRecommendations = await generateSpecificRecommendations(
+          type,
+          userUsage,
+          printerStatus,
+          costData
+        );
 
-      // Calculate potential savings
-      potentialSavings = calculatePotentialSavings(userUsage, costData);
+        // Generate comprehensive cost optimization report
+        const analysisData = {
+          userUsage,
+          printerStatus,
+          costData,
+          type,
+          department,
+          totalUsers: userUsage.length,
+          totalPrinters: printerStatus.length,
+          totalMonthlyCost: costData.reduce((sum, item) => sum + item.totalCost, 0)
+        };
+        
+        costOptimizationReport = await generateCostOptimizationReport(analysisData);
+
+        // Sentiment analysis of recent print job patterns (if applicable)
+        if (type === 'general' && userUsage.length > 0) {
+          const jobDescriptions = userUsage.slice(0, 5).map(user => 
+            `Usuário ${user.name} - ${user.totalJobs} jobs, R$ ${user.totalCost.toFixed(2)}, ${user.department}`
+          );
+          sentimentAnalysis = await analyzePrintJobSentiment(jobDescriptions);
+        }
+
+        // Calculate enhanced potential savings
+        potentialSavings = calculateEnhancedPotentialSavings(userUsage, costData, type);
+        
+      } catch (aiError) {
+        console.error('AI recommendations error:', aiError);
+        // Fallback to enhanced mock data
+        const mockData = getMockRecommendations();
+        recommendations = mockData.recommendations.slice(0, 3);
+        specificRecommendations = await generateSpecificRecommendations(type, userUsage, printerStatus, costData);
+        potentialSavings = mockData.potentialSavings;
+        costOptimizationReport = null;
+        sentimentAnalysis = null;
+      }
     } else {
-      // Use mock data for development/testing
+      // Enhanced mock data for development/testing
       const mockData = getMockRecommendations();
       recommendations = mockData.recommendations.slice(0, 3);
       specificRecommendations = mockData.recommendations.slice(3);
-      potentialSavings = mockData.potentialSavings;
+      potentialSavings = {
+        ...mockData.potentialSavings,
+        aiEnhanced: false,
+        confidenceLevel: 'mock_data'
+      };
       
-      // Add slight delay to simulate AI processing
-      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
+      // Mock cost optimization report
+      costOptimizationReport = {
+        executiveSummary: {
+          currentMonthlyCost: costData.reduce((sum, item) => sum + item.totalCost, 0).toFixed(2),
+          potentialSavings: (costData.reduce((sum, item) => sum + item.totalCost, 0) * 0.25).toFixed(2),
+          roi: '220%',
+          paybackPeriod: '2.8 meses',
+          priority: type
+        },
+        implementation: {
+          timeline: '60 dias',
+          effort: 'Médio',
+          impact: 'Alto'
+        }
+      };
+      
+      sentimentAnalysis = {
+        overall: 'neutral',
+        insights: ['Análise de sentimento com dados simulados']
+      };
+      
+      // Simulate comprehensive AI processing time
+      await new Promise(resolve => setTimeout(resolve, 1800 + Math.random() * 1200));
     }
 
     return NextResponse.json({
-      recommendations: [...recommendations, ...specificRecommendations],
+      recommendations: {
+        primary: recommendations,
+        specific: specificRecommendations,
+        combined: [...recommendations, ...specificRecommendations],
+        priority: rankRecommendationsByImpact([...recommendations, ...specificRecommendations])
+      },
       potentialSavings,
+      costOptimization: costOptimizationReport,
+      sentimentAnalysis,
       dataAnalysis: {
         userUsage: userUsage.length,
         printerStatus: printerStatus.length,
         totalCost: costData.reduce((sum, item) => sum + item.totalCost, 0),
+        averageCostPerUser: userUsage.length > 0 ? 
+          costData.reduce((sum, item) => sum + item.totalCost, 0) / userUsage.length : 0,
+        highUsageUsers: userUsage.filter(user => user.totalCost > 50).length,
+        underutilizedPrinters: printerStatus.filter(printer => (printer.utilization || 0) < 30).length,
+        colorUsageRatio: userUsage.reduce((sum, user) => sum + user.colorJobs, 0) / 
+                         userUsage.reduce((sum, user) => sum + user.totalJobs, 0) || 0
+      },
+      insights: {
+        topCostDepartment: costData.sort((a, b) => b.totalCost - a.totalCost)[0]?.department || 'N/A',
+        mostActiveUser: userUsage.sort((a, b) => b.totalJobs - a.totalJobs)[0]?.name || 'N/A',
+        efficiencyScore: calculateEfficiencyScore(userUsage, printerStatus, costData),
+        sustainabilityGrade: calculateSustainabilityGrade(costData)
+      },
+      metadata: {
+        aiProvider: isAzureAIConfigured() ? 'azure-openai' : 'mock',
+        analysisType: type,
+        generatedAt: new Date().toISOString(),
+        confidence: isAzureAIConfigured() ? 'high' : 'mock',
+        dataPoints: userUsage.length + printerStatus.length + costData.length
       },
       type,
       filters: {
         department,
         userId,
+        appliedAt: new Date().toISOString()
       },
     });
   } catch (error) {
@@ -284,4 +370,158 @@ function calculatePotentialSavings(userUsage: any[], costData: any[]) {
     totalPotential: Object.values(potentialSavings).reduce((sum, saving) => sum + saving, 0),
     currentMonthlyCost: totalCost,
   };
+}
+
+// Enhanced savings calculation with AI analysis
+function calculateEnhancedPotentialSavings(userUsage: any[], costData: any[], type: string) {
+  const totalCost = costData.reduce((sum, dept) => sum + dept.totalCost, 0);
+  const totalPages = costData.reduce((sum, dept) => sum + dept.totalPages, 0);
+  const colorCost = costData.reduce((sum, dept) => sum + dept.colorCost, 0);
+  
+  // Base optimizations
+  const baseSavings = {
+    duplexPrinting: totalCost * 0.35, // Enhanced 35% savings with better implementation
+    colorOptimization: colorCost * 0.25, // 25% reduction through policy changes
+    quotaOptimization: totalCost * 0.18, // 18% through AI-driven quota management
+    workflowOptimization: totalCost * 0.12, // 12% through digital workflows
+  };
+
+  // Type-specific optimizations
+  let specificSavings = {};
+  
+  switch (type) {
+    case 'cost':
+      specificSavings = {
+        printerConsolidation: totalCost * 0.08,
+        bulkPurchasing: totalCost * 0.05,
+        vendorNegotiation: totalCost * 0.03,
+      };
+      break;
+    case 'sustainability':
+      specificSavings = {
+        paperReduction: totalPages * 0.04 * 0.4, // 40% paper reduction at R$0.04/page
+        energyEfficiency: totalCost * 0.06,
+        wasteReduction: totalCost * 0.04,
+      };
+      break;
+    case 'efficiency':
+      specificSavings = {
+        automationSavings: totalCost * 0.15,
+        maintenanceOptimization: totalCost * 0.08,
+        capacityBalancing: totalCost * 0.10,
+      };
+      break;
+    default:
+      specificSavings = {
+        generalOptimization: totalCost * 0.10,
+        policyEnforcement: totalCost * 0.07,
+      };
+  }
+
+  const allSavings = { ...baseSavings, ...specificSavings };
+  const totalPotential = Object.values(allSavings).reduce((sum: number, saving: number) => sum + saving, 0);
+
+  return {
+    ...allSavings,
+    totalPotential,
+    currentMonthlyCost: totalCost,
+    annualPotential: totalPotential * 12,
+    roi: ((totalPotential * 12) / (totalCost * 12)) * 100,
+    paybackMonths: totalCost > 0 ? Math.round(totalCost / totalPotential) : 0,
+    confidenceLevel: 'high',
+    implementationComplexity: type === 'efficiency' ? 'high' : type === 'cost' ? 'medium' : 'low'
+  };
+}
+
+// Rank recommendations by business impact
+function rankRecommendationsByImpact(recommendations: string[]): { recommendation: string; impact: string; priority: number }[] {
+  return recommendations.map((rec, index) => {
+    let impact = 'medium';
+    let priority = index + 1;
+    
+    // Determine impact based on keywords
+    if (rec.toLowerCase().includes('r$') || rec.toLowerCase().includes('economia')) {
+      impact = 'high';
+      priority = Math.max(1, priority - 2);
+    } else if (rec.toLowerCase().includes('duplex') || rec.toLowerCase().includes('cor')) {
+      impact = 'high';
+      priority = Math.max(1, priority - 1);
+    } else if (rec.toLowerCase().includes('sustentab') || rec.toLowerCase().includes('ambiente')) {
+      impact = 'medium';
+    } else if (rec.toLowerCase().includes('manuten') || rec.toLowerCase().includes('error')) {
+      impact = 'high';
+      priority = 1;
+    }
+    
+    return {
+      recommendation: rec,
+      impact,
+      priority
+    };
+  }).sort((a, b) => a.priority - b.priority);
+}
+
+// Calculate overall efficiency score
+function calculateEfficiencyScore(userUsage: any[], printerStatus: any[], costData: any[]): number {
+  let score = 100; // Start with perfect score
+  
+  // Deduct points for inefficiencies
+  const totalCost = costData.reduce((sum, dept) => sum + dept.totalCost, 0);
+  const averageCostPerPage = totalCost / costData.reduce((sum, dept) => sum + dept.totalPages, 0);
+  
+  // Cost efficiency
+  if (averageCostPerPage > 0.10) score -= 20;
+  else if (averageCostPerPage > 0.08) score -= 10;
+  
+  // Utilization efficiency
+  const underutilized = printerStatus.filter(p => (p.utilization || 0) < 30).length;
+  const overutilized = printerStatus.filter(p => (p.utilization || 0) > 90).length;
+  score -= (underutilized + overutilized) * 5;
+  
+  // Color usage efficiency
+  const colorRatio = userUsage.reduce((sum, user) => sum + user.colorJobs, 0) / 
+                     userUsage.reduce((sum, user) => sum + user.totalJobs, 0);
+  if (colorRatio > 0.4) score -= 15;
+  else if (colorRatio > 0.3) score -= 8;
+  
+  // High usage users (potential waste)
+  const highUsageUsers = userUsage.filter(user => user.totalCost > 100).length;
+  score -= highUsageUsers * 3;
+  
+  return Math.max(0, Math.min(100, score));
+}
+
+// Calculate sustainability grade
+function calculateSustainabilityGrade(costData: any[]): string {
+  let score = 100;
+  
+  const totalPages = costData.reduce((sum, dept) => sum + dept.totalPages, 0);
+  const colorCost = costData.reduce((sum, dept) => sum + dept.colorCost, 0);
+  const totalCost = costData.reduce((sum, dept) => sum + dept.totalCost, 0);
+  
+  // Color usage impact
+  const colorRatio = colorCost / totalCost;
+  if (colorRatio > 0.4) score -= 25;
+  else if (colorRatio > 0.3) score -= 15;
+  else if (colorRatio > 0.2) score -= 8;
+  
+  // Volume impact  
+  if (totalPages > 2000) score -= 20;
+  else if (totalPages > 1500) score -= 12;
+  else if (totalPages > 1000) score -= 6;
+  
+  // Cost efficiency (indicates waste)
+  const avgCostPerPage = totalCost / totalPages;
+  if (avgCostPerPage > 0.12) score -= 15;
+  else if (avgCostPerPage > 0.10) score -= 8;
+  
+  // Return letter grade
+  if (score >= 90) return 'A+';
+  if (score >= 85) return 'A';
+  if (score >= 80) return 'B+';
+  if (score >= 75) return 'B';
+  if (score >= 70) return 'C+';
+  if (score >= 65) return 'C';
+  if (score >= 60) return 'D';
+  return 'F';
 }

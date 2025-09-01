@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getChatCompletion } from '@/lib/azure-ai';
-import { getMockChatResponse, isAzureAIConfigured } from '@/lib/mock-ai';
+import { getChatCompletion, isAzureAIConfigured } from '@/lib/azure-ai-simple';
+import { getMockChatResponse } from '@/lib/mock-ai';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,14 +28,35 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Get AI response (use mock if Azure AI not configured)
+    // Get enhanced AI response with business context
     let response;
-    if (isAzureAIConfigured()) {
-      response = await getChatCompletion(message, context);
-    } else {
+    try {
+      if (isAzureAIConfigured()) {
+        // Use real Azure OpenAI with enhanced business context
+        response = await getChatCompletion(message, {
+          userStats: context?.userStats,
+          printerStats: context?.printerIssues,
+          departmentData: {
+            name: context?.department,
+            quotaUsage: context?.quotaUsage
+          },
+          costAnalysis: {
+            totalCost: context?.userStats?.totalCost || 0,
+            averageCost: context?.userStats?.averageCostPerJob || 0,
+            colorRatio: context?.userStats ? 
+              (context.userStats.colorJobs / context.userStats.totalJobs) * 100 : 0
+          }
+        });
+      } else {
+        // Enhanced mock response with context
+        response = getMockChatResponse(message);
+        // Add realistic delay to simulate API processing
+        await new Promise(resolve => setTimeout(resolve, 1200 + Math.random() * 800));
+      }
+    } catch (aiError) {
+      console.error('AI processing error:', aiError);
+      // Fallback to basic mock response
       response = getMockChatResponse(message);
-      // Add slight delay to simulate API call
-      await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 1200));
     }
 
     // Log the interaction for analytics (optional)
@@ -60,10 +81,25 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       response,
-      context: context ? {
-        userStats: context.userStats,
-        hasRecentActivity: context.printJobs.length > 0,
-      } : null,
+      metadata: {
+        aiProvider: isAzureAIConfigured() ? 'azure-openai' : 'mock',
+        processingTime: Date.now(), // Can be used to calculate response time
+        hasContext: !!context,
+        contextSummary: context ? {
+          userStats: {
+            totalJobs: context.userStats?.totalJobs || 0,
+            totalCost: context.userStats?.totalCost || 0,
+            colorJobsRatio: context.userStats ? 
+              Math.round((context.userStats.colorJobs / context.userStats.totalJobs) * 100) : 0
+          },
+          quotaStatus: context.quotaUsage ? {
+            usagePercentage: Math.round(context.quotaUsage.usagePercentage),
+            colorUsagePercentage: Math.round(context.quotaUsage.colorUsagePercentage)
+          } : null,
+          printerIssues: context.printerIssues?.length || 0,
+          department: context.department
+        } : null
+      }
     });
   } catch (error) {
     console.error('Error in AI chat:', error);
