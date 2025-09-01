@@ -73,12 +73,27 @@ export default function AIInsights({ department, userId, period = 30 }: AIInsigh
       const recommendationsResponse = await fetch(`/api/ai/recommendations?${recParams}`);
       const recommendationsData = await recommendationsResponse.json();
       
+      // Debug logs
+      console.log('Full recommendationsData:', recommendationsData);
+      console.log('recommendationsData.recommendations:', recommendationsData.recommendations);
+      
       // Process insights from analysis
       const processedInsights = processAnalysisInsights(analysisData);
       setInsights(processedInsights);
 
-      // Process recommendations
-      const processedRecommendations = processRecommendations(recommendationsData.recommendations);
+      // Process recommendations - handle the complex structure from API
+      let recArray = [];
+      if (recommendationsData.recommendations) {
+        if (Array.isArray(recommendationsData.recommendations.primary)) {
+          recArray = recommendationsData.recommendations.primary;
+        } else if (Array.isArray(recommendationsData.recommendations.combined)) {
+          recArray = recommendationsData.recommendations.combined;
+        } else if (Array.isArray(recommendationsData.recommendations)) {
+          recArray = recommendationsData.recommendations;
+        }
+      }
+      
+      const processedRecommendations = processRecommendations(recArray);
       setRecommendations(processedRecommendations);
       setPotentialSavings(recommendationsData.potentialSavings);
 
@@ -92,12 +107,12 @@ export default function AIInsights({ department, userId, period = 30 }: AIInsigh
   const processAnalysisInsights = (data: any): Insight[] => {
     const insights: Insight[] = [];
 
-    if (data.analysis?.insights) {
+    if (data.analysis?.insights && Array.isArray(data.analysis.insights)) {
       data.analysis.insights.forEach((insight: string, index: number) => {
         insights.push({
           type: 'suggestion',
           title: `Insight ${index + 1}`,
-          description: insight,
+          description: typeof insight === 'string' ? insight : String(insight),
           impact: 'medium',
           category: 'efficiency',
         });
@@ -151,9 +166,15 @@ export default function AIInsights({ department, userId, period = 30 }: AIInsigh
   };
 
   const processRecommendations = (rawRecommendations: string[]): Recommendation[] => {
+    // Ensure we have a valid array
+    if (!Array.isArray(rawRecommendations)) {
+      console.warn('processRecommendations received non-array:', rawRecommendations);
+      return [];
+    }
+    
     return rawRecommendations.map((rec, index) => ({
       title: `Recomendação ${index + 1}`,
-      description: rec,
+      description: typeof rec === 'string' ? rec : String(rec),
       potentialSaving: Math.random() * 50 + 10, // Mock savings for now
       effort: ['low', 'medium', 'high'][Math.floor(Math.random() * 3)] as 'low' | 'medium' | 'high',
       priority: ['high', 'medium', 'low'][Math.floor(Math.random() * 3)] as 'high' | 'medium' | 'low',
