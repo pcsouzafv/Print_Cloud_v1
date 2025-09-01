@@ -86,13 +86,19 @@ jobs:
     - name: ⏳ Wait for deployment
       run: sleep 60
 
-    - name: 🗄️ Setup database schema
+    - name: 🗄️ Setup database schema and seed data
       run: |
         echo "🔄 Setting up database schema..."
         az containerapp exec \
           --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
           --name ${{ env.AZURE_CONTAINER_APP }} \
           --command "npx prisma db push --accept-data-loss" || echo "⚠️  Database setup failed - check manually"
+        
+        echo "🌱 Seeding database with sample data for AI analysis..."
+        az containerapp exec \
+          --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+          --name ${{ env.AZURE_CONTAINER_APP }} \
+          --command "npm run db:seed" || echo "⚠️  Database seeding failed - check manually"
 
     - name: 🏥 Health check
       run: |
