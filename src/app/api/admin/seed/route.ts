@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     const { exec } = require('child_process')
     
     return new Promise((resolve) => {
-      exec('npm run db:seed', { cwd: process.cwd() }, (error, stdout, stderr) => {
+      exec('npm run db:seed', { cwd: process.cwd() }, (error: any, stdout: string, stderr: string) => {
         if (error) {
           console.error('❌ Erro no seed:', error)
           resolve(NextResponse.json({ 
