@@ -33,6 +33,7 @@ export async function GET() {
       select: { name: true, email: true, department: true, role: true }
     })
 
+    // Buscar cotas e filtrar críticas (>= 90% do limite)
     const allQuotas = await prisma.printQuota.findMany({
       include: {
         user: {
@@ -41,9 +42,11 @@ export async function GET() {
       }
     })
 
-    // Filtrar cotas críticas (>= 90% do limite)
     const criticalQuotas = allQuotas
-      .filter(q => (q.currentUsage / q.monthlyLimit) >= 0.9)
+      .filter((quota) => {
+        const utilizationRate = quota.currentUsage / quota.monthlyLimit
+        return utilizationRate >= 0.9
+      })
       .slice(0, 5)
 
     return NextResponse.json({
