@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
+import { executeSeed } from '@/lib/seed-data'
 
 const prisma = new PrismaClient()
 
@@ -11,34 +12,23 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     await prisma.$queryRaw`SELECT 1`
     console.log('✅ Conexão com banco verificada')
 
-    // Executar seed (importar a função main)
-    const { exec } = require('child_process')
+    // Executar seed diretamente
+    const result = await executeSeed()
     
-    return new Promise<NextResponse>((resolve) => {
-      exec('npm run db:seed', { cwd: process.cwd() }, (error: any, stdout: string, stderr: string) => {
-        if (error) {
-          console.error('❌ Erro no seed:', error)
-          resolve(NextResponse.json({ 
-            success: false, 
-            error: error.message,
-            stderr 
-          }, { status: 500 }))
-        } else {
-          console.log('✅ Seed executado com sucesso')
-          resolve(NextResponse.json({ 
-            success: true, 
-            message: 'Seed executado com sucesso',
-            output: stdout 
-          }))
-        }
-      })
+    console.log('✅ Seed executado com sucesso via TypeScript')
+    return NextResponse.json({
+      success: true,
+      message: 'Seed executado com sucesso via código TypeScript',
+      stats: result.stats,
+      timestamp: new Date().toISOString()
     })
 
   } catch (error) {
     console.error('❌ Erro na API de seed:', error)
     return NextResponse.json({ 
       success: false, 
-      error: error instanceof Error ? error.message : 'Erro desconhecido' 
+      error: error instanceof Error ? error.message : 'Erro desconhecido',
+      timestamp: new Date().toISOString()
     }, { status: 500 })
   }
 }

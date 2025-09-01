@@ -68,7 +68,19 @@ npx prisma generate
 retry_command "npx prisma db push --accept-data-loss" "Setup do schema do banco"
 
 # Seed do banco com retry
-retry_command "npm run db:seed" "Seed do banco com dados de análise"
+echo "🌱 Tentando seed via npm primeiro..."
+if ! retry_command "npm run db:seed" "Seed do banco com dados de análise"; then
+    echo "⚠️ npm run db:seed falhou, tentando via API..."
+    
+    # Tentar via API como fallback
+    echo "🔄 Executando seed via API interna..."
+    if curl -X POST http://localhost:3000/api/admin/seed -H "Content-Type: application/json" > /dev/null 2>&1; then
+        echo "✅ Seed executado via API com sucesso"
+    else
+        echo "❌ Seed via API também falhou"
+        return 1
+    fi
+fi
 
 # Verificação final
 echo "🔍 Verificação final - contando registros..."
