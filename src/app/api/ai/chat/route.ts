@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getChatCompletion, isAzureAIConfigured } from '@/lib/azure-ai-simple';
+import { getChatCompletion, isAzureAIConfigured } from '@/lib/azure-ai';
 import { getMockChatResponse } from '@/lib/mock-ai';
 
 export const dynamic = 'force-dynamic';

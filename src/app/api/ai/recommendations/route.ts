@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { generateAIRecommendations, isAzureAIConfigured, generateCostOptimizationReport, analyzePrintJobSentiment } from '@/lib/azure-ai-simple';
+import { generateAIRecommendations, isAzureAIConfigured, generateCostOptimizationReport, analyzePrintJobSentiment } from '@/lib/azure-ai';
 import { getMockRecommendations } from '@/lib/mock-ai';
 
 export const dynamic = 'force-dynamic';
