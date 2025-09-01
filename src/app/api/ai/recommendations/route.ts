@@ -22,6 +22,64 @@ export async function GET(request: NextRequest) {
     // Enhanced AI recommendations with comprehensive analysis
     let recommendations, specificRecommendations, potentialSavings, costOptimizationReport, sentimentAnalysis;
     
+    // Se não há dados no banco, usar dados mock
+    if (userUsage.length === 0 && printerStatus.length === 0) {
+      const mockData = getMockRecommendations();
+      return NextResponse.json({
+        recommendations: {
+          primary: mockData.recommendations.slice(0, 3),
+          specific: mockData.recommendations.slice(3),
+          combined: mockData.recommendations,
+          priority: mockData.recommendations.map((rec, index) => ({
+            recommendation: rec,
+            impact: 'medium',
+            priority: index + 1
+          }))
+        },
+        potentialSavings: mockData.potentialSavings,
+        costOptimization: {
+          executiveSummary: {
+            currentMonthlyCost: '0.00',
+            potentialSavings: '0.00',
+            roi: '0%',
+            paybackPeriod: 'N/A'
+          }
+        },
+        sentimentAnalysis: {
+          overall: 'neutral',
+          insights: ['Sem dados disponíveis - execute o seed do banco']
+        },
+        dataAnalysis: {
+          userUsage: 0,
+          printerStatus: 0,
+          totalCost: 0,
+          averageCostPerUser: 0,
+          highUsageUsers: 0,
+          underutilizedPrinters: 0,
+          colorUsageRatio: 0
+        },
+        insights: {
+          topCostDepartment: 'N/A - Execute o seed',
+          mostActiveUser: 'N/A - Execute o seed',
+          efficiencyScore: 0,
+          sustainabilityGrade: 'N/A'
+        },
+        metadata: {
+          aiProvider: 'mock',
+          analysisType: type,
+          generatedAt: new Date().toISOString(),
+          confidence: 'no_data',
+          dataPoints: 0
+        },
+        type,
+        filters: {
+          department,
+          userId,
+          appliedAt: new Date().toISOString()
+        },
+      });
+    }
+    
     if (isAzureAIConfigured() && userUsage.length > 0) {
       try {
         // Advanced AI-powered recommendations with business context
@@ -108,10 +166,16 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       recommendations: {
-        primary: recommendations,
-        specific: specificRecommendations,
-        combined: [...recommendations, ...specificRecommendations],
-        priority: rankRecommendationsByImpact([...recommendations, ...specificRecommendations])
+        primary: Array.isArray(recommendations) ? recommendations : [],
+        specific: Array.isArray(specificRecommendations) ? specificRecommendations : [],
+        combined: [
+          ...(Array.isArray(recommendations) ? recommendations : []),
+          ...(Array.isArray(specificRecommendations) ? specificRecommendations : [])
+        ],
+        priority: rankRecommendationsByImpact([
+          ...(Array.isArray(recommendations) ? recommendations : []),
+          ...(Array.isArray(specificRecommendations) ? specificRecommendations : [])
+        ])
       },
       potentialSavings,
       costOptimization: costOptimizationReport,
@@ -435,6 +499,10 @@ function calculateEnhancedPotentialSavings(userUsage: any[], costData: any[], ty
 
 // Rank recommendations by business impact
 function rankRecommendationsByImpact(recommendations: string[]): { recommendation: string; impact: string; priority: number }[] {
+  if (!Array.isArray(recommendations)) {
+    return [];
+  }
+  
   return recommendations.map((rec, index) => {
     let impact = 'medium';
     let priority = index + 1;

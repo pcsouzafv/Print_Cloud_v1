@@ -103,13 +103,18 @@ export function getMockAnalysisData(period: number = 30) {
 
 export function getMockRecommendations() {
   return {
-    recommendations: mockAIResponses.recommendations,
+    recommendations: Array.isArray(mockAIResponses.recommendations) ? mockAIResponses.recommendations : [],
     potentialSavings: {
       duplexPrinting: 245.67,
       colorOptimization: 134.23,
       quotaOptimization: 89.45,
       totalPotential: 469.35,
       currentMonthlyCost: 1567.89,
+      annualPotential: 5632.20,
+      roi: 295.5,
+      paybackMonths: 3.2,
+      confidenceLevel: 'mock',
+      implementationComplexity: 'medium'
     },
     dataAnalysis: {
       userUsage: 25,
