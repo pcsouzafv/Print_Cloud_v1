@@ -221,17 +221,17 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <div>
-              <strong>1. Verificar Status:</strong> Clique em "Verificar Status" para ver quantos dados estão no banco.
+              <strong>1. Verificar Status:</strong> Clique em &quot;Verificar Status&quot; para ver quantos dados estão no banco.
             </div>
             <div>
-              <strong>2. Executar Seed:</strong> Se não há dados suficientes, clique em "Executar Seed Completo".
+              <strong>2. Executar Seed:</strong> Se não há dados suficientes, clique em &quot;Executar Seed Completo&quot;.
             </div>
             <div>
               <strong>3. Testar IA:</strong> Após o seed, vá para a aplicação e teste o PrintBot com perguntas como:
               <ul className="ml-4 mt-1 text-xs text-gray-600">
-                <li>• "Quais usuários estão próximos da cota?"</li>
-                <li>• "Como posso economizar nos custos de impressão?"</li>
-                <li>• "Há impressoras com problemas no momento?"</li>
+                <li>• &quot;Quais usuários estão próximos da cota?&quot;</li>
+                <li>• &quot;Como posso economizar nos custos de impressão?&quot;</li>
+                <li>• &quot;Há impressoras com problemas no momento?&quot;</li>
               </ul>
             </div>
           </CardContent>
