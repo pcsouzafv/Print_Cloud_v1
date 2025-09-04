@@ -147,7 +147,7 @@ export default function PrinterConfigModal({
                      config.network.snmpCommunity;
       
       setTestResult({
-        success,
+        success: !!success,
         message: success 
           ? `Conexão estabelecida com sucesso! Impressora respondendo na ${config.network.ipAddress}`
           : 'Falha na conexão. Verifique as configurações de rede e credenciais.'

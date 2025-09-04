@@ -36,6 +36,7 @@ class ApiClient {
     search?: string;
     page?: number;
     limit?: number;
+    printerId?: string;
   }) {
     const searchParams = new URLSearchParams();
     
