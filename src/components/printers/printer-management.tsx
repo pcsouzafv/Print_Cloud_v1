@@ -76,11 +76,13 @@ export default function PrinterManagement() {
       await apiClient.createPrinter({
         name: printerData.name,
         ipAddress: printerData.ip,
-        model: printerData.model,
-        manufacturer: printerData.manufacturer,
+        model: printerData.model || `${printerData.manufacturer || 'Unknown'} Printer`,
         location: printerData.location || 'Não especificado',
         department: printerData.department || 'Geral',
-        status: printerData.status === 'online' ? 'ACTIVE' : 'OFFLINE'
+        serialNumber: printerData.serialNumber || `SN-${Date.now()}`,
+        isColorPrinter: printerData.isColorPrinter || false,
+        monthlyQuota: printerData.monthlyQuota || 1000,
+        status: printerData.status === 'online' ? 'ACTIVE' : 'ACTIVE'
       });
       fetchPrinters(); // Refresh the list
     } catch (error) {
@@ -366,6 +368,7 @@ export default function PrinterManagement() {
                 ip: formData.get('ip') as string,
                 model: formData.get('model') as string,
                 manufacturer: formData.get('manufacturer') as string,
+                serialNumber: formData.get('serialNumber') as string,
                 location: formData.get('location') as string,
                 department: formData.get('department') as string,
                 status: 'online'
@@ -423,6 +426,16 @@ export default function PrinterManagement() {
                     placeholder="LaserJet Pro"
                   />
                 </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-1">Número de Série</label>
+                <input
+                  name="serialNumber"
+                  type="text"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="Ex: HP123456 (deixe em branco para gerar automaticamente)"
+                />
               </div>
               
               <div>
