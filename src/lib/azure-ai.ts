@@ -1,16 +1,18 @@
 // Simplified Azure AI Integration for Print Cloud
 // This version avoids complex typing issues while maintaining functionality
 
-// Configuration
+// Configuration using new Azure AI environment variables
 const azureOpenAIConfig = {
   endpoint: process.env.AZURE_OPENAI_ENDPOINT || '',
-  apiKey: process.env.AZURE_OPENAI_API_KEY || '',
-  deploymentName: process.env.AZURE_OPENAI_DEPLOYMENT_NAME || 'gpt-35-turbo',
+  apiKey: process.env.AZURE_OPENAI_KEY || '',
+  gpt4Deployment: process.env.AZURE_OPENAI_GPT4_DEPLOYMENT || 'gpt-4-turbo',
+  gpt35Deployment: process.env.AZURE_OPENAI_GPT35_DEPLOYMENT || 'gpt-35-turbo',
+  embeddingDeployment: process.env.AZURE_OPENAI_EMBEDDING_DEPLOYMENT || 'text-embedding-ada-002',
 };
 
-const azureTextAnalyticsConfig = {
-  endpoint: process.env.AZURE_TEXT_ANALYTICS_ENDPOINT || '',
-  apiKey: process.env.AZURE_TEXT_ANALYTICS_API_KEY || '',
+const azureAIConfig = {
+  endpoint: process.env.AZURE_AI_ENDPOINT || '',
+  apiKey: process.env.AZURE_AI_KEY || '',
 };
 
 // Check if Azure AI services are configured
@@ -52,11 +54,48 @@ Você é um consultor especializado em otimização de impressão empresarial co
 Lembre-se: Você é um consultor sênior em gestão de impressão. Seja assertivo, baseado em dados e sempre focado em ROI e sustentabilidade.
 `;
 
-// Chat Completion (simplified to avoid typing issues)
+// Chat Completion with real Azure OpenAI integration
 export async function getChatCompletion(message: string, context?: any): Promise<string> {
-  // For now, always use enhanced mock responses
-  // Real Azure integration can be enabled later with proper typing
-  return getMockChatResponse(message, context);
+  if (!isAzureAIConfigured()) {
+    console.log('Azure AI not configured, using mock responses');
+    return getMockChatResponse(message, context);
+  }
+
+  try {
+    const response = await fetch(`${azureOpenAIConfig.endpoint}openai/deployments/${azureOpenAIConfig.gpt4Deployment}/chat/completions?api-version=2024-03-01-preview`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'api-key': azureOpenAIConfig.apiKey,
+      },
+      body: JSON.stringify({
+        messages: [
+          {
+            role: 'system',
+            content: ASSISTANT_SYSTEM_PROMPT
+          },
+          {
+            role: 'user',
+            content: `Contexto: ${context ? JSON.stringify(context) : 'Nenhum contexto adicional'}\n\nPergunta: ${message}`
+          }
+        ],
+        max_tokens: 1000,
+        temperature: 0.7,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('Azure OpenAI API error:', response.status, response.statusText);
+      return getMockChatResponse(message, context);
+    }
+
+    const data = await response.json();
+    return data.choices[0]?.message?.content || getMockChatResponse(message, context);
+
+  } catch (error) {
+    console.error('Error calling Azure OpenAI:', error);
+    return getMockChatResponse(message, context);
+  }
 }
 
 // Enhanced mock responses with business intelligence
@@ -158,7 +197,39 @@ export async function analyzePrintPatterns(printJobs: any[]): Promise<{
     colorRatio: totalJobs > 0 ? (colorJobs / totalJobs) * 100 : 0
   };
 
-  const insights = [
+  // Try to get real AI analysis if Azure is configured
+  let aiInsights: string[] = [];
+  if (isAzureAIConfigured() && totalJobs > 0) {
+    try {
+      const analysisPrompt = `
+      Analise os seguintes dados de impressão como um especialista em otimização de custos corporativos:
+
+      Dados:
+      - Total de jobs: ${totalJobs}
+      - Jobs coloridos: ${colorJobs} (${patterns.colorRatio.toFixed(1)}%)
+      - Custo total: R$ ${totalCost.toFixed(2)}
+      - Média páginas/job: ${patterns.averagePagesPerJob.toFixed(1)}
+      - Custo por job: R$ ${patterns.costEfficiency.toFixed(2)}
+
+      Forneça 4 insights específicos e acionáveis em formato de bullet points, focando em:
+      1. Análise de performance vs benchmark
+      2. Identificação de oportunidades de economia
+      3. Padrões de uso que chamam atenção
+      4. Recomendação prioritária com valor estimado
+      `;
+
+      const aiResponse = await getChatCompletion(analysisPrompt);
+      if (aiResponse && !aiResponse.includes('especialista em gestão de impressão')) {
+        // Parse AI response into insights
+        aiInsights = aiResponse.split('\n').filter(line => line.trim().startsWith('-') || line.trim().startsWith('•')).slice(0, 4);
+      }
+    } catch (error) {
+      console.error('AI analysis error:', error);
+    }
+  }
+
+  // Use AI insights if available, otherwise use enhanced mock insights
+  const insights = aiInsights.length > 0 ? aiInsights : [
     `📈 **Performance**: ${totalJobs} jobs processados com eficiência de ${(85 + Math.random() * 10).toFixed(1)}% vs benchmark setorial`,
     `💰 **Custo Total**: R$ ${totalCost.toFixed(2)} no período analisado`,
     `🎨 **Uso de Cor**: ${patterns.colorRatio.toFixed(1)}% das impressões são coloridas`,
