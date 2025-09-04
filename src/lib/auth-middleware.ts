@@ -107,7 +107,7 @@ export class AuthMiddleware {
       };
     }
 
-    const apiToken = await prisma.apiToken?.findUnique({
+    const apiToken = await prisma.apiToken.findUnique({
       where: { token: apiKey },
       include: { user: true },
     });
