@@ -167,6 +167,7 @@ export default function ReportsPage() {
                 className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 value={dateRange}
                 onChange={(e) => setDateRange(e.target.value)}
+                aria-label="Selecionar período do relatório"
               >
                 <option value="7">Últimos 7 dias</option>
                 <option value="30">Últimos 30 dias</option>
@@ -180,6 +181,7 @@ export default function ReportsPage() {
                 className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 value={reportType}
                 onChange={(e) => setReportType(e.target.value)}
+                aria-label="Selecionar tipo de relatório"
               >
                 <option value="overview">Visão Geral</option>
                 <option value="detailed">Detalhado</option>
