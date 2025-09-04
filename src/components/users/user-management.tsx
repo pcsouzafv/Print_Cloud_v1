@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import UserQuotaModal from './user-quota-modal';
+import UserHistoryModal from './user-history-modal';
 
 export default function UserManagement() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -29,6 +30,7 @@ export default function UserManagement() {
   const [error, setError] = useState<string | null>(null);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [showQuotaModal, setShowQuotaModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
 
   useEffect(() => {
@@ -79,6 +81,11 @@ export default function UserManagement() {
   const handleEditQuota = (user: any) => {
     setSelectedUser(user);
     setShowQuotaModal(true);
+  };
+
+  const handleViewHistory = (user: any) => {
+    setSelectedUser(user);
+    setShowHistoryModal(true);
   };
 
   const handleSaveQuota = async (quotaData: any) => {
@@ -377,7 +384,7 @@ export default function UserManagement() {
                   <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEditQuota(user)}>
                     Editar Cotas
                   </Button>
-                  <Button variant="outline" size="sm" className="flex-1" onClick={() => alert('Histórico do usuário em desenvolvimento')}>
+                  <Button variant="outline" size="sm" className="flex-1" onClick={() => handleViewHistory(user)}>
                     Ver Histórico
                   </Button>
                 </div>
@@ -506,6 +513,13 @@ export default function UserManagement() {
         onClose={() => setShowQuotaModal(false)}
         user={selectedUser}
         onSave={handleSaveQuota}
+      />
+
+      {/* User History Modal */}
+      <UserHistoryModal
+        isOpen={showHistoryModal}
+        onClose={() => setShowHistoryModal(false)}
+        user={selectedUser}
       />
     </div>
   );
