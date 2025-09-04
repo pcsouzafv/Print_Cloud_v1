@@ -405,6 +405,7 @@ export default function PrinterManagement() {
                   <select
                     name="manufacturer"
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    aria-label="Selecionar fabricante da impressora"
                   >
                     <option value="">Selecionar...</option>
                     <option value="HP">HP</option>
@@ -453,6 +454,7 @@ export default function PrinterManagement() {
                 <select
                   name="department"
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  aria-label="Selecionar departamento da impressora"
                 >
                   <option value="">Selecionar...</option>
                   <option value="Geral">Geral</option>
