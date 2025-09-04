@@ -1,0 +1,242 @@
+# Azure AI Services Deployment Configuration
+# Para implantação automática dos serviços Azure AI para Print Cloud
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: printcloud-ai-config
+  namespace: printcloud
+data:
+  # Azure OpenAI Configuration
+  AZURE_OPENAI_REGION: "East US 2"
+  AZURE_OPENAI_VERSION: "2024-03-01-preview"
+  
+  # Model Deployments
+  GPT4_DEPLOYMENT: "gpt-4-turbo"
+  GPT35_DEPLOYMENT: "gpt-35-turbo"  
+  EMBEDDING_DEPLOYMENT: "text-embedding-ada-002"
+  
+  # Azure AI Services
+  AZURE_AI_REGION: "East US 2"
+  
+  # Cognitive Search
+  SEARCH_INDEX: "printcloud-knowledge"
+  SEARCH_API_VERSION: "2024-02-01"
+  
+  # Feature Flags
+  ENABLE_REALTIME_AI: "true"
+  ENABLE_FUNCTION_CALLING: "true"
+  ENABLE_EMBEDDINGS: "true"
+  ENABLE_SEARCH_INTEGRATION: "true"
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: printcloud-ai-service
+  namespace: printcloud
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: printcloud-ai
+  template:
+    metadata:
+      labels:
+        app: printcloud-ai
+    spec:
+      containers:
+      - name: printcloud-ai
+        image: printcloudregistry.azurecr.io/printcloud:latest
+        ports:
+        - containerPort: 3000
+        env:
+        # Azure OpenAI
+        - name: AZURE_OPENAI_ENDPOINT
+          valueFrom:
+            secretKeyRef:
+              name: printcloud-ai-secrets
+              key: openai-endpoint
+        - name: AZURE_OPENAI_KEY
+          valueFrom:
+            secretKeyRef:
+              name: printcloud-ai-secrets  
+              key: openai-key
+        
+        # Azure AI Services
+        - name: AZURE_AI_ENDPOINT
+          valueFrom:
+            secretKeyRef:
+              name: printcloud-ai-secrets
+              key: ai-endpoint
+        - name: AZURE_AI_KEY
+          valueFrom:
+            secretKeyRef:
+              name: printcloud-ai-secrets
+              key: ai-key
+              
+        # Azure Search
+        - name: AZURE_SEARCH_ENDPOINT
+          valueFrom:
+            secretKeyRef:
+              name: printcloud-ai-secrets
+              key: search-endpoint
+        - name: AZURE_SEARCH_KEY
+          valueFrom:
+            secretKeyRef:
+              name: printcloud-ai-secrets
+              key: search-key
+              
+        # Storage
+        - name: AZURE_STORAGE_CONNECTION_STRING
+          valueFrom:
+            secretKeyRef:
+              name: printcloud-ai-secrets
+              key: storage-connection
+              
+        # Configuration from ConfigMap
+        envFrom:
+        - configMapRef:
+            name: printcloud-ai-config
+            
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi" 
+            cpu: "1000m"
+            
+        livenessProbe:
+          httpGet:
+            path: /api/ai/realtime
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: printcloud-ai-service
+  namespace: printcloud
+spec:
+  selector:
+    app: printcloud-ai
+  ports:
+  - name: http
+    port: 80
+    targetPort: 3000
+  type: ClusterIP
+
+---
+
+# Horizontal Pod Autoscaler para escalar baseado na demanda de IA
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: printcloud-ai-hpa
+  namespace: printcloud
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: printcloud-ai-service
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+
+---
+
+# Job para treinamento do modelo
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: printcloud-ai-training
+  namespace: printcloud
+spec:
+  template:
+    spec:
+      containers:
+      - name: ai-trainer
+        image: printcloudregistry.azurecr.io/printcloud:latest
+        command: ["npm", "run", "train-ai"]
+        env:
+        # Mesmas variáveis de ambiente do deployment principal
+        - name: AZURE_OPENAI_ENDPOINT
+          valueFrom:
+            secretKeyRef:
+              name: printcloud-ai-secrets
+              key: openai-endpoint
+        - name: AZURE_OPENAI_KEY
+          valueFrom:
+            secretKeyRef:
+              name: printcloud-ai-secrets
+              key: openai-key
+        envFrom:
+        - configMapRef:
+            name: printcloud-ai-config
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+      restartPolicy: OnFailure
+  backoffLimit: 3
+
+---
+
+# CronJob para retreinamento periódico
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: printcloud-ai-retrain
+  namespace: printcloud
+spec:
+  schedule: "0 2 * * 0"  # Todo domingo às 2:00 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: ai-retrainer
+            image: printcloudregistry.azurecr.io/printcloud:latest
+            command: ["npm", "run", "retrain-ai"]
+            env:
+            - name: AZURE_OPENAI_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: printcloud-ai-secrets
+                  key: openai-endpoint
+            - name: AZURE_OPENAI_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: printcloud-ai-secrets
+                  key: openai-key
+            envFrom:
+            - configMapRef:
+                name: printcloud-ai-config
+          restartPolicy: OnFailure

@@ -43,4 +43,4 @@ prisma/migrations/
 .idea/
 
 # OS
-Thumbs.db
+Thumbs.db.env.azure.ai

@@ -20,13 +20,14 @@ import PrinterManagement from '@/components/printers/printer-management';
 import UserManagement from '@/components/users/user-management';
 import AIInsights from '@/components/ai/ai-insights';
 import AIAssistant from '@/components/ai/ai-assistant';
+import RealtimeChat from '@/components/ai/realtime-chat';
 import { apiClient } from '@/lib/api-client';
 
 // Import the pages that were previously "in development"
 import ReportsPage from '@/app/reports/page';
 import SettingsPage from '@/app/settings/page';
 
-type ActiveSection = 'dashboard' | 'printers' | 'users' | 'ai-insights' | 'reports' | 'settings';
+type ActiveSection = 'dashboard' | 'printers' | 'users' | 'ai-insights' | 'ai-realtime' | 'reports' | 'settings';
 
 export default function Dashboard() {
   const { instance, accounts } = useMsal();
@@ -45,6 +46,7 @@ export default function Dashboard() {
     { id: 'printers', label: 'Impressoras', icon: Printer },
     { id: 'users', label: 'Usuários', icon: Users },
     { id: 'ai-insights', label: 'Insights IA', icon: Brain },
+    { id: 'ai-realtime', label: 'IA Tempo Real', icon: Brain },
     { id: 'reports', label: 'Relatórios', icon: BarChart3 },
     { id: 'settings', label: 'Configurações', icon: Settings },
   ];
@@ -57,6 +59,8 @@ export default function Dashboard() {
         return <UserManagement />;
       case 'ai-insights':
         return <AIInsights userId={user?.localAccountId} department={user?.username?.split('@')[1]} />;
+      case 'ai-realtime':
+        return <RealtimeChat userId={user?.localAccountId} department={user?.username?.split('@')[1]} />;
       case 'reports':
         return <ReportsPage />;
       case 'settings':
