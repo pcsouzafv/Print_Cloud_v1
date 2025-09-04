@@ -238,6 +238,7 @@ export default function PrinterConfigModal({
                         value={config.general.name}
                         onChange={(e) => updateConfig('general', 'name', e.target.value)}
                         className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                        aria-label="Nome da impressora"
                       />
                     </div>
                     <div>
@@ -247,6 +248,7 @@ export default function PrinterConfigModal({
                         value={config.general.location}
                         onChange={(e) => updateConfig('general', 'location', e.target.value)}
                         className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                        aria-label="Localização da impressora"
                       />
                     </div>
                   </div>
@@ -276,6 +278,7 @@ export default function PrinterConfigModal({
                       value={config.general.monthlyQuota}
                       onChange={(e) => updateConfig('general', 'monthlyQuota', parseInt(e.target.value))}
                       className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                      aria-label="Cota mensal em páginas"
                     />
                   </div>
                 </div>
@@ -308,6 +311,7 @@ export default function PrinterConfigModal({
                         onChange={(e) => updateConfig('network', 'ipAddress', e.target.value)}
                         placeholder="192.168.1.100"
                         className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                        aria-label="Endereço IP da impressora"
                       />
                     </div>
                     <div>
@@ -317,6 +321,7 @@ export default function PrinterConfigModal({
                         value={config.network.snmpCommunity}
                         onChange={(e) => updateConfig('network', 'snmpCommunity', e.target.value)}
                         className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                        aria-label="Comunidade SNMP"
                       />
                     </div>
                   </div>
@@ -330,6 +335,7 @@ export default function PrinterConfigModal({
                       value={config.network.pollInterval}
                       onChange={(e) => updateConfig('network', 'pollInterval', parseInt(e.target.value))}
                       className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                      aria-label="Intervalo de polling em segundos"
                     />
                   </div>
                   <div>
@@ -339,6 +345,7 @@ export default function PrinterConfigModal({
                       value={config.network.timeout}
                       onChange={(e) => updateConfig('network', 'timeout', parseInt(e.target.value))}
                       className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                      aria-label="Timeout em segundos"
                     />
                   </div>
                 </div>
@@ -381,6 +388,7 @@ export default function PrinterConfigModal({
                         value={config.integration.type}
                         onChange={(e) => updateConfig('integration', 'type', e.target.value)}
                         className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                        aria-label="Selecionar tipo de integração"
                       >
                         <option value="SNMP">SNMP</option>
                         <option value="HTTP">HTTP API</option>
@@ -394,6 +402,7 @@ export default function PrinterConfigModal({
                         value={config.integration.authType}
                         onChange={(e) => updateConfig('integration', 'authType', e.target.value)}
                         className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                        aria-label="Selecionar tipo de autenticação"
                       >
                         <option value="NONE">Nenhuma</option>
                         <option value="BASIC">Básica (usuário/senha)</option>
@@ -412,6 +421,7 @@ export default function PrinterConfigModal({
                         value={config.integration.credentials?.username || ''}
                         onChange={(e) => updateCredentials('username', e.target.value)}
                         className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                        aria-label="Usuário para autenticação"
                       />
                     </div>
                     <div>
@@ -421,6 +431,7 @@ export default function PrinterConfigModal({
                         value={config.integration.credentials?.password || ''}
                         onChange={(e) => updateCredentials('password', e.target.value)}
                         className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                        aria-label="Senha para autenticação"
                       />
                     </div>
                   </div>
@@ -434,6 +445,7 @@ export default function PrinterConfigModal({
                       value={config.integration.credentials?.apiKey || ''}
                       onChange={(e) => updateCredentials('apiKey', e.target.value)}
                       className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                      aria-label="Chave da API"
                     />
                   </div>
                 )}
@@ -504,6 +516,7 @@ export default function PrinterConfigModal({
                         value={config.notifications.quotaWarningThreshold}
                         onChange={(e) => updateConfig('notifications', 'quotaWarningThreshold', parseInt(e.target.value))}
                         className="w-32 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                        aria-label="Limite de alerta de cota em porcentagem"
                       />
                     </div>
                   </div>
