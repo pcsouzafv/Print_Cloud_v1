@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import RecommendationDetailsModal from './recommendation-details-modal';
 import { 
   Brain,
   TrendingUp,
@@ -46,6 +47,8 @@ export default function AIInsights({ department, userId, period = 30 }: AIInsigh
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'cost' | 'sustainability' | 'efficiency'>('all');
   const [analysis, setAnalysis] = useState<any>(null);
+  const [selectedRecommendation, setSelectedRecommendation] = useState<Recommendation | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     loadInsights();
@@ -237,6 +240,17 @@ export default function AIInsights({ department, userId, period = 30 }: AIInsigh
     ? insights 
     : insights.filter(insight => insight.category === selectedCategory);
 
+  const handleRecommendationDetails = (recommendation: Recommendation) => {
+    setSelectedRecommendation(recommendation);
+    setIsModalOpen(true);
+  };
+
+  const handleImplementRecommendation = (recommendation: Recommendation) => {
+    // Here you could implement actual logic to track implemented recommendations
+    console.log('Implementing recommendation:', recommendation);
+    // You could call an API to save the implementation status
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -372,7 +386,12 @@ export default function AIInsights({ department, userId, period = 30 }: AIInsigh
                       </div>
                     </div>
                     <p className="text-gray-600 text-xs mb-2">{rec.description}</p>
-                    <Button variant="outline" size="sm" className="w-full" onClick={() => alert('Detalhes da recomendação em desenvolvimento')}>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full" 
+                      onClick={() => handleRecommendationDetails(rec)}
+                    >
                       <ChevronRight size={12} />
                       Ver detalhes
                     </Button>
@@ -438,6 +457,14 @@ export default function AIInsights({ department, userId, period = 30 }: AIInsigh
           </Card>
         </div>
       )}
+
+      {/* Recommendation Details Modal */}
+      <RecommendationDetailsModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        recommendation={selectedRecommendation}
+        onImplement={handleImplementRecommendation}
+      />
     </div>
   );
 }
