@@ -99,26 +99,65 @@ export default function RealtimeChat({ userId, department, onActionRequired }: R
         systemMetrics: {}
       };
 
-      // Simular streaming de resposta
-      await simulateAIStreaming(userMessage.content, context, (chunk, isComplete, metadata) => {
-        setMessages(prev => prev.map(msg => 
-          msg.id === assistantMessage.id 
-            ? { 
-                ...msg, 
-                content: msg.content + chunk,
-                isStreaming: !isComplete,
-                metadata: metadata 
-              }
-            : msg
-        ));
-
-        if (isComplete && metadata?.type === 'function_result' && metadata.data) {
-          // Se há dados de ação, notificar o componente pai
-          if (onActionRequired) {
-            onActionRequired(metadata.function, metadata.data);
-          }
-        }
+      // Chamada real para API de streaming
+      const response = await fetch('/api/ai/realtime', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: userMessage.content,
+          context,
+          options: { stream: true }
+        }),
       });
+
+      if (!response.ok) {
+        throw new Error('Falha na comunicação com o assistente');
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (reader) {
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n').filter(line => line.trim());
+
+            for (const line of lines) {
+              try {
+                const data = JSON.parse(line);
+                
+                setMessages(prev => prev.map(msg => 
+                  msg.id === assistantMessage.id 
+                    ? { 
+                        ...msg, 
+                        content: data.content,
+                        isStreaming: !data.isComplete,
+                        metadata: data.metadata 
+                      }
+                    : msg
+                ));
+
+                if (data.isComplete) {
+                  break;
+                }
+              } catch (parseError) {
+                console.error('Error parsing streaming data:', parseError);
+              }
+            }
+          }
+        } catch (streamError) {
+          console.error('Streaming error:', streamError);
+        } finally {
+          reader.releaseLock();
+        }
+      }
 
     } catch (error) {
       console.error('Chat error:', error);
