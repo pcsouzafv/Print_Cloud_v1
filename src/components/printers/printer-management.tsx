@@ -18,6 +18,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { apiClient } from '@/lib/api-client';
 import PrinterDiscoveryModal from './printer-discovery-modal';
+import PrinterConfigModal from './printer-config-modal';
+import PrinterDetailsModal from './printer-details-modal';
 
 declare module 'react' {
   interface CSSProperties {
@@ -42,6 +44,9 @@ export default function PrinterManagement() {
   const [error, setError] = useState<string | null>(null);
   const [showDiscoveryModal, setShowDiscoveryModal] = useState(false);
   const [showManualModal, setShowManualModal] = useState(false);
+  const [showConfigModal, setShowConfigModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedPrinter, setSelectedPrinter] = useState<any>(null);
 
   useEffect(() => {
     fetchPrinters();
@@ -88,6 +93,34 @@ export default function PrinterManagement() {
     } catch (error) {
       console.error('Error adding printer:', error);
       setError('Erro ao adicionar impressora');
+    }
+  };
+
+  const handleConfigurePrinter = (printer: any) => {
+    setSelectedPrinter(printer);
+    setShowConfigModal(true);
+  };
+
+  const handleViewDetails = (printer: any) => {
+    setSelectedPrinter(printer);
+    setShowDetailsModal(true);
+  };
+
+  const handleSavePrinterConfig = async (updatedPrinter: any) => {
+    try {
+      await apiClient.updatePrinter(updatedPrinter.id, {
+        name: updatedPrinter.name,
+        location: updatedPrinter.location,
+        department: updatedPrinter.department,
+        monthlyQuota: updatedPrinter.monthlyQuota,
+        isColorPrinter: updatedPrinter.isColorPrinter,
+        ipAddress: updatedPrinter.ipAddress
+      });
+      fetchPrinters(); // Refresh the list
+      setShowConfigModal(false);
+    } catch (error) {
+      console.error('Error updating printer config:', error);
+      setError('Erro ao salvar configurações da impressora');
     }
   };
 
@@ -326,11 +359,11 @@ export default function PrinterManagement() {
                 </div>
 
                 <div className="pt-2 border-t flex space-x-2">
-                  <Button variant="outline" size="sm" className="flex-1" onClick={() => alert('Configuração de impressora em desenvolvimento')}>
+                  <Button variant="outline" size="sm" className="flex-1" onClick={() => handleConfigurePrinter(printer)}>
                     <Settings size={14} className="mr-1" />
                     Configurar
                   </Button>
-                  <Button variant="outline" size="sm" className="flex-1" onClick={() => alert('Detalhes da impressora em desenvolvimento')}>
+                  <Button variant="outline" size="sm" className="flex-1" onClick={() => handleViewDetails(printer)}>
                     Ver Detalhes
                   </Button>
                 </div>
@@ -484,6 +517,21 @@ export default function PrinterManagement() {
         isOpen={showDiscoveryModal}
         onClose={() => setShowDiscoveryModal(false)}
         onAddPrinter={handleAddPrinter}
+      />
+
+      {/* Printer Configuration Modal */}
+      <PrinterConfigModal
+        isOpen={showConfigModal}
+        onClose={() => setShowConfigModal(false)}
+        printer={selectedPrinter}
+        onSave={handleSavePrinterConfig}
+      />
+
+      {/* Printer Details Modal */}
+      <PrinterDetailsModal
+        isOpen={showDetailsModal}
+        onClose={() => setShowDetailsModal(false)}
+        printer={selectedPrinter}
       />
     </div>
   );

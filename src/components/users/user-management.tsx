@@ -18,6 +18,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
+import UserQuotaModal from './user-quota-modal';
 
 export default function UserManagement() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -27,6 +28,8 @@ export default function UserManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [showQuotaModal, setShowQuotaModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
 
   useEffect(() => {
     fetchUsers();
@@ -70,6 +73,28 @@ export default function UserManagement() {
     } catch (error) {
       console.error('Error adding user:', error);
       setError('Erro ao adicionar usuário');
+    }
+  };
+
+  const handleEditQuota = (user: any) => {
+    setSelectedUser(user);
+    setShowQuotaModal(true);
+  };
+
+  const handleSaveQuota = async (quotaData: any) => {
+    try {
+      // This would call an API to update user quota
+      // For now, we'll simulate the call
+      console.log('Saving quota for user:', quotaData);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      fetchUsers(); // Refresh the list
+      setShowQuotaModal(false);
+    } catch (error) {
+      console.error('Error updating quota:', error);
+      setError('Erro ao atualizar cota do usuário');
     }
   };
 
@@ -349,7 +374,7 @@ export default function UserManagement() {
                 </div>
 
                 <div className="pt-2 border-t flex space-x-2">
-                  <Button variant="outline" size="sm" className="flex-1" onClick={() => alert('Edição de cotas em desenvolvimento')}>
+                  <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEditQuota(user)}>
                     Editar Cotas
                   </Button>
                   <Button variant="outline" size="sm" className="flex-1" onClick={() => alert('Histórico do usuário em desenvolvimento')}>
@@ -472,6 +497,14 @@ export default function UserManagement() {
           </div>
         </div>
       )}
+
+      {/* User Quota Modal */}
+      <UserQuotaModal
+        isOpen={showQuotaModal}
+        onClose={() => setShowQuotaModal(false)}
+        user={selectedUser}
+        onSave={handleSaveQuota}
+      />
     </div>
   );
 }
