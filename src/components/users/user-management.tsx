@@ -448,6 +448,7 @@ export default function UserManagement() {
                   name="department"
                   required
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  aria-label="Selecionar departamento do usuário"
                 >
                   <option value="">Selecionar...</option>
                   <option value="Geral">Geral</option>
@@ -465,6 +466,7 @@ export default function UserManagement() {
                   name="role"
                   required
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  aria-label="Selecionar função do usuário"
                 >
                   <option value="">Selecionar...</option>
                   <option value="USER">Usuário</option>
