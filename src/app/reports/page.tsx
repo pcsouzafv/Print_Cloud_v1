@@ -17,6 +17,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { apiClient } from '@/lib/api-client';
+import { generateReport } from '@/lib/report-generator';
 
 interface ReportData {
   totalPrintJobs: number;
@@ -53,6 +54,7 @@ export default function ReportsPage() {
   const [dateRange, setDateRange] = useState('30');
   const [reportType, setReportType] = useState('overview');
   const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
   const [reportData, setReportData] = useState<ReportData>({
     totalPrintJobs: 0,
     totalPages: 0,
@@ -97,10 +99,27 @@ export default function ReportsPage() {
     }
   };
 
-  const generateReport = async (format: 'pdf' | 'excel' | 'csv') => {
-    // Simulate report generation
-    const fileName = `relatorio-impressao-${dateRange}dias.${format}`;
-    alert(`Relatório ${fileName} será baixado em alguns segundos...`);
+  const handleGenerateReport = async (format: 'pdf' | 'excel' | 'csv') => {
+    setGenerating(true);
+    try {
+      const reportOptions = {
+        title: 'Relatório de Impressão - Print Cloud',
+        dateRange: `Últimos ${dateRange} dias`,
+        reportType: reportType,
+        data: reportData,
+        generatedAt: new Date()
+      };
+
+      await generateReport(format, reportOptions);
+      
+      // Success feedback
+      alert(`Relatório ${format.toUpperCase()} gerado e baixado com sucesso!`);
+    } catch (error) {
+      console.error('Erro ao gerar relatório:', error);
+      alert(`Erro ao gerar relatório ${format.toUpperCase()}. Tente novamente.`);
+    } finally {
+      setGenerating(false);
+    }
   };
 
   if (loading) {
@@ -123,17 +142,17 @@ export default function ReportsPage() {
           <p className="text-gray-600">Análise detalhada de uso e custos de impressão</p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => generateReport('pdf')} variant="outline">
+          <Button onClick={() => handleGenerateReport('pdf')} variant="outline" disabled={generating}>
             <Download size={16} className="mr-2" />
-            PDF
+            {generating ? 'Gerando...' : 'PDF'}
           </Button>
-          <Button onClick={() => generateReport('excel')} variant="outline">
+          <Button onClick={() => handleGenerateReport('excel')} variant="outline" disabled={generating}>
             <Download size={16} className="mr-2" />
-            Excel
+            {generating ? 'Gerando...' : 'Excel'}
           </Button>
-          <Button onClick={() => generateReport('csv')} variant="outline">
+          <Button onClick={() => handleGenerateReport('csv')} variant="outline" disabled={generating}>
             <Download size={16} className="mr-2" />
-            CSV
+            {generating ? 'Gerando...' : 'CSV'}
           </Button>
         </div>
       </div>

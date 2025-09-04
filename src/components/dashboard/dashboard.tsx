@@ -22,6 +22,10 @@ import AIInsights from '@/components/ai/ai-insights';
 import AIAssistant from '@/components/ai/ai-assistant';
 import { apiClient } from '@/lib/api-client';
 
+// Import the pages that were previously "in development"
+import ReportsPage from '@/app/reports/page';
+import SettingsPage from '@/app/settings/page';
+
 type ActiveSection = 'dashboard' | 'printers' | 'users' | 'ai-insights' | 'reports' | 'settings';
 
 export default function Dashboard() {
@@ -54,9 +58,9 @@ export default function Dashboard() {
       case 'ai-insights':
         return <AIInsights userId={user?.localAccountId} department={user?.username?.split('@')[1]} />;
       case 'reports':
-        return <div className="p-6">Relatórios em desenvolvimento...</div>;
+        return <ReportsPage />;
       case 'settings':
-        return <div className="p-6">Configurações em desenvolvimento...</div>;
+        return <SettingsPage />;
       default:
         return <DashboardContent />;
     }
