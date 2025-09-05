@@ -99,16 +99,16 @@ export default function RealtimeChat({ userId, department, onActionRequired }: R
         systemMetrics: {}
       };
 
-      // Chamada real para API de streaming
-      const response = await fetch('/api/ai/realtime', {
+      // Chamada para API de chat funcionando
+      const response = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           message: userMessage.content,
-          context,
-          options: { stream: true }
+          userId: userId || 'demo-user',
+          includeContext: true
         }),
       });
 
@@ -116,46 +116,32 @@ export default function RealtimeChat({ userId, department, onActionRequired }: R
         throw new Error('Falha na comunicação com o assistente');
       }
 
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-
-      if (reader) {
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            
-            if (done) break;
-
-            const chunk = decoder.decode(value);
-            const lines = chunk.split('\n').filter(line => line.trim());
-
-            for (const line of lines) {
-              try {
-                const data = JSON.parse(line);
-                
-                setMessages(prev => prev.map(msg => 
-                  msg.id === assistantMessage.id 
-                    ? { 
-                        ...msg, 
-                        content: data.content,
-                        isStreaming: !data.isComplete,
-                        metadata: data.metadata 
-                      }
-                    : msg
-                ));
-
-                if (data.isComplete) {
-                  break;
+      // Processar resposta JSON da API de chat
+      const data = await response.json();
+      
+      if (data.response) {
+        // Simular efeito de streaming para melhor UX
+        const fullResponse = data.response;
+        const words = fullResponse.split(' ');
+        
+        for (let i = 0; i < words.length; i++) {
+          const partialResponse = words.slice(0, i + 1).join(' ');
+          
+          setMessages(prev => prev.map(msg => 
+            msg.id === assistantMessage.id 
+              ? { 
+                  ...msg, 
+                  content: partialResponse,
+                  isStreaming: i < words.length - 1,
+                  metadata: data.metadata 
                 }
-              } catch (parseError) {
-                console.error('Error parsing streaming data:', parseError);
-              }
-            }
+              : msg
+          ));
+          
+          // Pequeno delay para simular streaming
+          if (i < words.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 50));
           }
-        } catch (streamError) {
-          console.error('Streaming error:', streamError);
-        } finally {
-          reader.releaseLock();
         }
       }
 
