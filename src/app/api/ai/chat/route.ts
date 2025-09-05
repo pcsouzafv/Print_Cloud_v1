@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getChatCompletion, isAzureAIConfigured } from '@/lib/azure-ai';
 import { getMockChatResponse } from '@/lib/mock-ai';
 import { getMockUserContext, getContextualInsights, MOCK_DATABASE } from '@/lib/mock-database';
+import DatabaseTrainingService from '@/lib/database-training';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,6 +25,25 @@ export async function POST(request: NextRequest) {
     if (userId && includeContext) {
       try {
         context = await gatherUserContext(userId);
+        
+        // Enriquecer contexto com dados do sistema de treinamento
+        const dbTraining = DatabaseTrainingService.getInstance();
+        const enrichedContext = await dbTraining.getContextForAI(userId);
+        
+        if (enrichedContext && enrichedContext.summary) {
+          (context as any).databaseContext = {
+            totalUsersInSystem: enrichedContext.userProfiles?.length || 0,
+            totalPrintersInSystem: enrichedContext.printerStatus?.length || 0,
+            recentJobsCount: enrichedContext.recentActivity?.length || 0,
+            systemInsights: enrichedContext.summary.summary || {},
+            topUsers: enrichedContext.summary.topUsers?.slice(0, 5) || [],
+            printerUtilization: enrichedContext.summary.printerUtilization || [],
+            departmentAnalysis: enrichedContext.summary.departmentAnalysis || [],
+            anomalies: enrichedContext.summary.anomalies || [],
+            patterns: enrichedContext.patterns || {}
+          };
+        }
+        
       } catch (error) {
         console.warn('Could not gather user context from database, using mock data:', error);
         // Use rich mock data when database is not available
@@ -31,17 +51,40 @@ export async function POST(request: NextRequest) {
         (context as any).isSimulated = true;
       }
     } else if (includeContext) {
-      // Even without userId, provide rich contextual data for better AI analysis
-      context = getMockUserContext();
-      (context as any).isSimulated = true;
-      (context as any).systemOverview = {
-        totalUsers: MOCK_DATABASE.users.length,
-        totalPrinters: MOCK_DATABASE.printers.length,
-        totalDepartments: MOCK_DATABASE.departments.length,
-        monthlyBudget: MOCK_DATABASE.departments.reduce((sum, d) => sum + d.budget, 0),
-        criticalIssues: MOCK_DATABASE.criticalEvents.filter(e => e.severity === 'HIGH').length,
-        insights: getContextualInsights()
-      };
+      try {
+        // Buscar dados gerais do sistema mesmo sem userId específico
+        const dbTraining = DatabaseTrainingService.getInstance();
+        const systemContext = await dbTraining.getTrainingData({
+          includePatterns: true
+        });
+        
+        context = {
+          systemOverview: {
+            totalUsers: systemContext.users.length,
+            totalPrinters: systemContext.printers.length,
+            totalDepartments: systemContext.departments.length,
+            totalPrintJobs: systemContext.printJobs.length,
+            totalCost: systemContext.printJobs.reduce((sum, job) => sum + job.cost, 0),
+            insights: systemContext.insights,
+            patterns: systemContext.patterns
+          },
+          isSystemWide: true
+        };
+        
+      } catch (error) {
+        console.warn('Could not gather system context, using mock data:', error);
+        // Even without userId, provide rich contextual data for better AI analysis
+        context = getMockUserContext();
+        (context as any).isSimulated = true;
+        (context as any).systemOverview = {
+          totalUsers: MOCK_DATABASE.users.length,
+          totalPrinters: MOCK_DATABASE.printers.length,
+          totalDepartments: MOCK_DATABASE.departments.length,
+          monthlyBudget: MOCK_DATABASE.departments.reduce((sum, d) => sum + d.budget, 0),
+          criticalIssues: MOCK_DATABASE.criticalEvents.filter(e => e.severity === 'HIGH').length,
+          insights: getContextualInsights()
+        };
+      }
     }
 
     // Get enhanced AI response with business context
@@ -49,7 +92,7 @@ export async function POST(request: NextRequest) {
     try {
       if (isAzureAIConfigured()) {
         // Use real Azure OpenAI with enhanced business context
-        response = await getChatCompletion(message, {
+        const enhancedContext = {
           userStats: context?.userStats,
           printerStats: context?.printerIssues,
           departmentData: {
@@ -61,8 +104,14 @@ export async function POST(request: NextRequest) {
             averageCost: context?.userStats?.averageCostPerJob || 0,
             colorRatio: context?.userStats ? 
               (context.userStats.colorJobs / context.userStats.totalJobs) * 100 : 0
-          }
-        });
+          },
+          // Adicionar dados do sistema de treinamento
+          databaseContext: (context as any)?.databaseContext,
+          systemOverview: (context as any)?.systemOverview,
+          isSystemWide: (context as any)?.isSystemWide || false
+        };
+        
+        response = await getChatCompletion(message, enhancedContext);
       } else {
         // Enhanced mock response with context
         response = getMockChatResponse(message);

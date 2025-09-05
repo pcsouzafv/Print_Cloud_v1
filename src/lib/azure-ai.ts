@@ -22,37 +22,115 @@ export function isAzureAIConfigured(): boolean {
 
 // Enhanced System Prompt for Business Intelligence
 export const ASSISTANT_SYSTEM_PROMPT = `
-Você é PrintBot, o especialista em IA do Print Cloud - Sistema de Gestão Inteligente de Impressoras Empresariais.
+Você é PrintBot, o especialista em IA do Print Cloud - Sistema de Gestão Inteligente de Impressoras Empresariais com ACESSO COMPLETO ao banco de dados PostgreSQL em tempo real.
 
 🎯 ESPECIALIZAÇÃO PRINCIPAL:
 Você é um consultor especializado em otimização de impressão empresarial com conhecimento profundo em:
 - Gestão de custos de impressão e análise de ROI
-- Sustentabilidade corporativa e redução de desperdício
+- Sustentabilidade corporativa e redução de desperdício  
 - Análise preditiva de manutenção de impressoras
 - Otimização de fluxos de trabalho de documentos
 - Compliance e auditoria de impressão
 
-📊 DADOS DE CONTEXTO DISPONÍVEIS:
-- Impressoras: Status, localização, tipo (P&B/Colorida), quotas, histórico
-- Usuários: Cotas individuais, departamentos, padrões de uso, custos mensais
-- Departamentos: TI, Marketing, Vendas, Financeiro, Administração
+📊 DADOS REAIS DISPONÍVEIS EM TEMPO REAL:
+- Usuários: Dados completos de todos os usuários do sistema (nome, departamento, cotas, histórico)
+- Impressoras: Status atual, utilização, localização, tipo (P&B/Colorida), histórico de jobs
+- Trabalhos de Impressão: Todos os jobs dos últimos 90 dias com detalhes completos
+- Departamentos: Análise completa por setor com orçamentos e gastos reais
+- Custos: Dados financeiros precisos com valores em Reais (R$)
+- Padrões: Análises temporais, anomalias, tendências de uso
 - Métricas: Custos por página (P&B: R$0,05 | Colorida: R$0,25)
 
-🧠 CAPACIDADES INTELIGENTES:
-1. Análise Preditiva: Prever necessidades de manutenção, consumo futuro
-2. Otimização Automática: Sugerir redistribuição de cargas, ajustes de cotas
-3. Detecção de Anomalias: Identificar padrões incomuns, possível fraude
-4. Benchmarking: Comparar performance com padrões da indústria
+🔍 CAPACIDADES DE CONSULTA:
+IMPORTANTE: Você tem acesso aos dados reais do sistema através do contexto fornecido:
+- systemOverview: Dados gerais do sistema (total de usuários, impressoras, trabalhos, custos)
+- databaseContext: Dados específicos do usuário com insights detalhados
+- topUsers: Ranking dos maiores usuários por custo
+- departmentAnalysis: Análise por departamento com orçamento vs gasto real
+- printerUtilization: Utilização real de cada impressora
+- anomalies: Detecção automática de anomalias no uso
+
+🧠 COMO RESPONDER:
+1. SEMPRE use os dados reais fornecidos no contexto quando disponíveis
+2. Para perguntas como "quantos usuários", use systemOverview.totalUsers
+3. Para análises de custo, use os dados financeiros reais do contexto
+4. Para status de impressoras, use printerUtilization com dados reais
+5. Seja ESPECÍFICO com números e valores em R$
 
 💡 ESTILO DE COMUNICAÇÃO:
 - Use emojis contextuais (🖨️📊💰🌱⚡) para melhor visualização
-- Forneça dados específicos com valores monetários quando possível
-- Estruture respostas com tópicos claros e actionable insights
+- SEMPRE forneça números específicos dos dados reais
+- Estruture respostas com tópicos claros e insights acionáveis
 - Inclua sempre um "Próximo Passo" ou "Recomendação Imediata"
-- Seja proativo sugerindo análises complementares
+- Seja proativo sugerindo análises complementares baseadas nos dados reais
 
-Lembre-se: Você é um consultor sênior em gestão de impressão. Seja assertivo, baseado em dados e sempre focado em ROI e sustentabilidade.
+LEMBRE-SE: Você TEM acesso aos dados reais. Use-os sempre! Nunca diga que não tem informações se o contexto contém dados do sistema.
 `;
+
+// Build contextual prompt with structured data
+function buildContextualPrompt(message: string, context?: any): string {
+  let prompt = `DADOS DO SISTEMA EM TEMPO REAL:\n\n`;
+  
+  if (context?.systemOverview) {
+    const sys = context.systemOverview;
+    prompt += `📊 VISÃO GERAL DO SISTEMA:\n`;
+    prompt += `- Total de usuários: ${sys.totalUsers || 0}\n`;
+    prompt += `- Total de impressoras: ${sys.totalPrinters || 0}\n`;
+    prompt += `- Total de departamentos: ${sys.totalDepartments || 0}\n`;
+    prompt += `- Total de trabalhos de impressão: ${sys.totalPrintJobs || 0}\n`;
+    prompt += `- Custo total do sistema: R$ ${(sys.totalCost || 0).toFixed(2)}\n\n`;
+  }
+  
+  if (context?.databaseContext) {
+    const db = context.databaseContext;
+    prompt += `🔍 DADOS ESPECÍFICOS DO BANCO:\n`;
+    prompt += `- Usuários no sistema: ${db.totalUsersInSystem || 0}\n`;
+    prompt += `- Impressoras ativas: ${db.totalPrintersInSystem || 0}\n`;
+    prompt += `- Jobs recentes analisados: ${db.recentJobsCount || 0}\n`;
+    
+    if (db.topUsers?.length > 0) {
+      prompt += `\n👥 TOP 5 USUÁRIOS POR CUSTO:\n`;
+      db.topUsers.forEach((user: any, i: number) => {
+        prompt += `${i + 1}. ${user.name} (${user.department}): R$ ${(user.totalCost || 0).toFixed(2)}\n`;
+      });
+    }
+    
+    if (db.departmentAnalysis?.length > 0) {
+      prompt += `\n🏢 ANÁLISE POR DEPARTAMENTO:\n`;
+      db.departmentAnalysis.forEach((dept: any) => {
+        const utilizationRate = dept.utilizationRate || 0;
+        prompt += `- ${dept.name}: R$ ${(dept.spent || 0).toFixed(2)} de R$ ${(dept.budget || 0).toFixed(2)} (${utilizationRate.toFixed(1)}%)\n`;
+      });
+    }
+    
+    if (db.printerUtilization?.length > 0) {
+      prompt += `\n🖨️ STATUS DAS IMPRESSORAS:\n`;
+      db.printerUtilization.forEach((printer: any) => {
+        prompt += `- ${printer.name}: ${(printer.utilization || 0).toFixed(1)}% utilização\n`;
+      });
+    }
+    
+    if (db.anomalies?.length > 0) {
+      prompt += `\n🚨 ANOMALIAS DETECTADAS:\n`;
+      db.anomalies.forEach((anomaly: any) => {
+        prompt += `- ${anomaly.type}: ${anomaly.description || anomaly.userName}\n`;
+      });
+    }
+  }
+  
+  if (context?.userStats) {
+    const stats = context.userStats;
+    prompt += `\n👤 DADOS DO USUÁRIO ATUAL:\n`;
+    prompt += `- Total de jobs: ${stats.totalJobs || 0}\n`;
+    prompt += `- Total de páginas: ${stats.totalPages || 0}\n`;
+    prompt += `- Custo total: R$ ${(stats.totalCost || 0).toFixed(2)}\n`;
+    prompt += `- Jobs coloridos: ${stats.colorJobs || 0}\n`;
+  }
+  
+  prompt += `\n📝 PERGUNTA DO USUÁRIO: ${message}`;
+  
+  return prompt;
+}
 
 // Chat Completion with real Azure OpenAI integration
 export async function getChatCompletion(message: string, context?: any): Promise<string> {
@@ -75,8 +153,8 @@ export async function getChatCompletion(message: string, context?: any): Promise
             content: ASSISTANT_SYSTEM_PROMPT
           },
           {
-            role: 'user',
-            content: `Contexto: ${context ? JSON.stringify(context) : 'Nenhum contexto adicional'}\n\nPergunta: ${message}`
+            role: 'user', 
+            content: buildContextualPrompt(message, context)
           }
         ],
         max_tokens: 1000,
