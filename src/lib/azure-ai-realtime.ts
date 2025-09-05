@@ -1,6 +1,7 @@
 import { EventEmitter } from 'events';
 import { AzureOpenAI } from 'openai/azure';
 import { SearchClient, AzureKeyCredential } from '@azure/search-documents';
+import DatabaseTrainingService from './database-training';
 
 interface PrintCloudContext {
   userId: string;
@@ -28,11 +29,13 @@ interface StreamingResponse {
 export class PrintCloudRealtimeAI extends EventEmitter {
   private openaiClient!: AzureOpenAI;
   private searchClient!: SearchClient<any>;
+  private dbTraining: DatabaseTrainingService;
   private isInitialized: boolean = false;
   private conversationHistory: Array<{ role: string; content: string }> = [];
   
   constructor() {
     super();
+    this.dbTraining = DatabaseTrainingService.getInstance();
     this.setupClients();
   }
 
@@ -78,7 +81,10 @@ export class PrintCloudRealtimeAI extends EventEmitter {
     }
 
     try {
-      const systemPrompt = this.buildSystemPrompt(context);
+      // Buscar dados reais do banco para enriquecer o contexto
+      const dbContext = await this.getEnrichedContext(context);
+      const systemPrompt = this.buildSystemPrompt(context, dbContext);
+      
       const messages = [
         { role: 'system', content: systemPrompt },
         ...this.conversationHistory.slice(-10), // Últimas 10 mensagens
@@ -233,6 +239,30 @@ export class PrintCloudRealtimeAI extends EventEmitter {
             }
           }
         }
+      },
+      {
+        name: 'search_database',
+        description: 'BUSCA INTELIGENTE: Consulta dados específicos no banco PostgreSQL para análises detalhadas. Acesso a usuários, impressoras, trabalhos, custos e padrões reais.',
+        parameters: {
+          type: 'object',
+          properties: {
+            query_type: { 
+              type: 'string', 
+              description: 'Tipo de busca: "user_analysis", "printer_status", "cost_breakdown", "department_comparison", "usage_patterns", "anomaly_detection"'
+            },
+            filters: {
+              type: 'object',
+              description: 'Filtros específicos: {userId, department, timeRange, includePatterns}',
+              properties: {
+                userId: { type: 'string' },
+                department: { type: 'string' },
+                timeRange: { type: 'string', description: '7d, 30d, 90d' },
+                includePatterns: { type: 'boolean' }
+              }
+            }
+          },
+          required: ['query_type']
+        }
       }
     ];
   }
@@ -258,6 +288,9 @@ export class PrintCloudRealtimeAI extends EventEmitter {
       
       case 'generate_sustainability_report':
         return this.generateSustainabilityReport(args, context);
+      
+      case 'search_database':
+        return this.searchDatabase(args, context);
       
       default:
         return {
@@ -424,8 +457,207 @@ export class PrintCloudRealtimeAI extends EventEmitter {
     };
   }
 
+  // Buscar dados específicos no banco
+  private async searchDatabase(args: any, context: PrintCloudContext) {
+    const { query_type, filters = {} } = args;
+    
+    try {
+      console.log(`🔍 Executando busca no banco: ${query_type}`, filters);
+      
+      // Definir filtros baseados no tipo de consulta
+      const searchFilters = {
+        userId: filters.userId || context.userId,
+        department: filters.department || context.department,
+        timeRange: this.parseTimeRange(filters.timeRange || '30d'),
+        includePatterns: filters.includePatterns !== false
+      };
+
+      let result;
+      
+      switch (query_type) {
+        case 'user_analysis':
+          result = await this.getUserAnalysis(searchFilters);
+          break;
+          
+        case 'printer_status':
+          result = await this.getPrinterStatusAnalysis(searchFilters);
+          break;
+          
+        case 'cost_breakdown':
+          result = await this.getCostBreakdown(searchFilters);
+          break;
+          
+        case 'department_comparison':
+          result = await this.getDepartmentComparison(searchFilters);
+          break;
+          
+        case 'usage_patterns':
+          result = await this.getUsagePatterns(searchFilters);
+          break;
+          
+        case 'anomaly_detection':
+          result = await this.getAnomalies(searchFilters);
+          break;
+          
+        default:
+          // Busca geral
+          result = await this.dbTraining.getTrainingData(searchFilters);
+      }
+      
+      console.log(`✅ Busca ${query_type} concluída com sucesso`);
+      
+      return {
+        message: `Dados do banco consultados com sucesso para: ${query_type}`,
+        queryType: query_type,
+        filters: searchFilters,
+        data: result,
+        timestamp: new Date().toISOString()
+      };
+      
+    } catch (error) {
+      console.error(`❌ Erro na busca ${query_type}:`, error);
+      
+      return {
+        message: `Erro ao consultar dados: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
+        queryType: query_type,
+        error: true,
+        timestamp: new Date().toISOString()
+      };
+    }
+  }
+
+  // Métodos auxiliares para diferentes tipos de análise
+  private parseTimeRange(timeRange: string): { from: Date; to: Date } {
+    const now = new Date();
+    let days = 30;
+    
+    switch (timeRange) {
+      case '7d': days = 7; break;
+      case '30d': days = 30; break;
+      case '90d': days = 90; break;
+      default: days = 30;
+    }
+    
+    return {
+      from: new Date(now.getTime() - days * 24 * 60 * 60 * 1000),
+      to: now
+    };
+  }
+
+  private async getUserAnalysis(filters: any) {
+    const trainingData = await this.dbTraining.getTrainingData(filters);
+    
+    return {
+      userProfile: trainingData.users.find(u => u.id === filters.userId) || null,
+      recentJobs: trainingData.printJobs.filter(j => j.userId === filters.userId).slice(0, 20),
+      quota: trainingData.quotas.find(q => q.userId === filters.userId) || null,
+      comparison: {
+        departmentAverage: trainingData.insights.departmentAnalysis?.find(
+          d => d.name === filters.department
+        )?.avgJobCost || 0,
+        userAverage: trainingData.printJobs
+          .filter(j => j.userId === filters.userId)
+          .reduce((sum, j) => sum + j.cost, 0) / trainingData.printJobs.filter(j => j.userId === filters.userId).length || 0
+      }
+    };
+  }
+
+  private async getPrinterStatusAnalysis(filters: any) {
+    const trainingData = await this.dbTraining.getTrainingData(filters);
+    
+    return {
+      printers: trainingData.printers.map(p => ({
+        ...p,
+        recentJobs: p.printJobs?.length || 0,
+        avgJobsPerDay: (p.printJobs?.length || 0) / 30,
+        utilization: (p.printJobs?.length || 0) > 100 ? 'HIGH' : 
+                    (p.printJobs?.length || 0) > 50 ? 'MEDIUM' : 'LOW'
+      })),
+      statusHistory: trainingData.statusHistory.slice(0, 50)
+    };
+  }
+
+  private async getCostBreakdown(filters: any) {
+    const trainingData = await this.dbTraining.getTrainingData(filters);
+    
+    const totalCost = trainingData.printJobs.reduce((sum, j) => sum + j.cost, 0);
+    const colorCost = trainingData.printJobs.filter(j => j.isColor).reduce((sum, j) => sum + j.cost, 0);
+    
+    return {
+      summary: {
+        totalCost,
+        colorCost,
+        blackWhiteCost: totalCost - colorCost,
+        colorPercentage: (colorCost / totalCost) * 100
+      },
+      byDepartment: trainingData.insights.departmentAnalysis || [],
+      topSpenders: trainingData.insights.topUsers?.slice(0, 10) || [],
+      costTrends: trainingData.patterns.costPatterns || {}
+    };
+  }
+
+  private async getDepartmentComparison(filters: any) {
+    const trainingData = await this.dbTraining.getTrainingData(filters);
+    
+    return {
+      departments: trainingData.insights.departmentAnalysis || [],
+      comparison: trainingData.patterns.departmentPatterns || [],
+      recommendations: trainingData.insights.recommendations?.filter(
+        r => r.type === 'department_optimization'
+      ) || []
+    };
+  }
+
+  private async getUsagePatterns(filters: any) {
+    const trainingData = await this.dbTraining.getTrainingData(filters);
+    
+    return {
+      timePatterns: trainingData.patterns.timePatterns || {},
+      userPatterns: trainingData.patterns.userPatterns || [],
+      printerPatterns: trainingData.patterns.printerPatterns || [],
+      wastePatterns: trainingData.patterns.wastePatterns || []
+    };
+  }
+
+  private async getAnomalies(filters: any) {
+    const trainingData = await this.dbTraining.getTrainingData(filters);
+    
+    return {
+      anomalies: trainingData.insights.anomalies || [],
+      alerts: trainingData.insights.recommendations?.filter(
+        r => r.priority === 'high'
+      ) || [],
+      unusualActivity: trainingData.patterns.wastePatterns || []
+    };
+  }
+
+  // Buscar contexto enriquecido do banco de dados
+  private async getEnrichedContext(context: PrintCloudContext): Promise<any> {
+    try {
+      console.log('🔍 Buscando dados reais do banco para contexto da IA...');
+      
+      const dbContext = await this.dbTraining.getContextForAI(
+        context.userId,
+        context.department
+      );
+      
+      console.log('✅ Dados do banco carregados:', {
+        recentJobs: dbContext.recentActivity?.length || 0,
+        users: dbContext.userProfiles?.length || 0,
+        printers: dbContext.printerStatus?.length || 0,
+        patterns: Object.keys(dbContext.patterns || {}).length
+      });
+      
+      return dbContext;
+      
+    } catch (error) {
+      console.warn('⚠️ Falha ao carregar dados do banco, usando contexto básico:', error);
+      return null;
+    }
+  }
+
   // Sistema de prompt especializado
-  private buildSystemPrompt(context: PrintCloudContext): string {
+  private buildSystemPrompt(context: PrintCloudContext, dbContext?: any): string {
     return `
 Você é o **PrintCloud AI Expert** - o consultor líder em otimização de impressão empresarial do Brasil. Você tem 15 anos de experiência ajudando empresas a economizar milhões em custos de impressão.
 
@@ -440,6 +672,8 @@ Você é o **PrintCloud AI Expert** - o consultor líder em otimização de impr
 - Trabalhos de impressão recentes: ${context.recentPrintJobs?.length || 0}
 - Impressoras ativas: ${context.printerStatus?.length || 0}
 - Departamentos monitorados: ${context.costData?.length || 0}
+
+${dbContext ? this.buildDatabaseContext(dbContext) : '**[DADOS DO BANCO NÃO DISPONÍVEIS - USANDO CONTEXTO BÁSICO]**'}
 
 **SEU FOCO PRINCIPAL:**
 1. **ECONOMIA IMEDIATA:** Identifique oportunidades de redução de custos com valores específicos
@@ -469,6 +703,71 @@ Você é o **PrintCloud AI Expert** - o consultor líder em otimização de impr
 - Confiante baseado em dados reais
 - Urgente para implementação imediata
 `;
+  }
+
+  // Construir contexto detalhado dos dados do banco
+  private buildDatabaseContext(dbContext: any): string {
+    let context = '\n**📊 DADOS REAIS DO SISTEMA (ÚLTIMOS 30 DIAS):**\n';
+    
+    if (dbContext.summary) {
+      const s = dbContext.summary.summary;
+      context += `
+**RESUMO EXECUTIVO:**
+- Total de trabalhos: ${s?.totalJobs || 0}
+- Total de páginas: ${s?.totalPages?.toLocaleString('pt-BR') || 0}
+- Custo total: R$ ${s?.totalCost?.toFixed(2) || '0.00'}
+- Impressão colorida: ${s?.colorPercentage?.toFixed(1) || 0}%
+- Custo médio por trabalho: R$ ${s?.avgCostPerJob?.toFixed(2) || '0.00'}
+`;
+    }
+    
+    if (dbContext.summary?.topUsers?.length > 0) {
+      context += '\n**👥 TOP 5 USUÁRIOS POR CUSTO:**\n';
+      dbContext.summary.topUsers.slice(0, 5).forEach((user: any, i: number) => {
+        context += `${i + 1}. ${user.name} (${user.department}): R$ ${user.totalCost?.toFixed(2) || '0.00'} | ${user.totalJobs} jobs\n`;
+      });
+    }
+    
+    if (dbContext.summary?.departmentAnalysis?.length > 0) {
+      context += '\n**🏢 ANÁLISE POR DEPARTAMENTO:**\n';
+      dbContext.summary.departmentAnalysis.forEach((dept: any) => {
+        const utilizationRate = dept.utilizationRate || 0;
+        const status = utilizationRate > 90 ? '🔴 CRÍTICO' : 
+                      utilizationRate > 70 ? '🟡 ATENÇÃO' : '🟢 OK';
+        context += `- ${dept.name}: ${status} | R$ ${dept.spent?.toFixed(2) || '0.00'} de R$ ${dept.budget?.toFixed(2) || '0.00'} (${utilizationRate.toFixed(1)}%)\n`;
+      });
+    }
+    
+    if (dbContext.summary?.printerUtilization?.length > 0) {
+      context += '\n**🖨️ STATUS DAS IMPRESSORAS:**\n';
+      dbContext.summary.printerUtilization.forEach((printer: any) => {
+        const utilization = printer.utilization || 0;
+        const efficiency = printer.efficiency || 0;
+        const status = utilization > 85 ? '⚡ ALTA' : 
+                      utilization > 50 ? '📊 MÉDIA' : '💤 BAIXA';
+        context += `- ${printer.name} (${printer.department}): ${status} | ${utilization.toFixed(1)}% utilização | ${efficiency.toFixed(1)}% eficiência\n`;
+      });
+    }
+    
+    if (dbContext.patterns?.wastePatterns?.length > 0) {
+      context += '\n**⚠️ OPORTUNIDADES DE ECONOMIA DETECTADAS:**\n';
+      dbContext.patterns.wastePatterns.forEach((waste: any) => {
+        context += `- ${waste.description}: Economia potencial de R$ ${waste.impact?.toFixed(2) || '0.00'}\n`;
+      });
+    }
+    
+    if (dbContext.summary?.anomalies?.length > 0) {
+      context += '\n**🚨 ANOMALIAS DETECTADAS:**\n';
+      dbContext.summary.anomalies.forEach((anomaly: any) => {
+        if (anomaly.type === 'high_usage_user') {
+          context += `- ${anomaly.userName}: Uso muito acima da média (${anomaly.jobCount} jobs vs ${anomaly.threshold?.toFixed(0)} esperado)\n`;
+        }
+      });
+    }
+    
+    context += '\n**🎯 USE ESTES DADOS REAIS para suas análises e recomendações específicas!**\n';
+    
+    return context;
   }
 
   // Mock streaming para desenvolvimento
