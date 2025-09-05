@@ -176,11 +176,28 @@ export default function AIAssistant({
   }
 
   return (
-    <div className={`fixed bottom-4 right-4 z-50 ${
-      isExpanded ? 'w-96 h-[600px]' : 'w-80 h-96'
-    } transition-all duration-300`}>
-      <Card className="h-full flex flex-col shadow-2xl">
-        <CardHeader className="flex-shrink-0 pb-2">
+    <>
+      <style jsx>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: #f1f5f9;
+          border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+        }
+      `}</style>
+      <div className={`fixed bottom-4 right-4 z-50 ${
+        isExpanded ? 'w-96 h-[600px]' : 'w-80 h-96'
+      } transition-all duration-300`}>
+      <Card className="h-full flex flex-col shadow-2xl border">
+        <CardHeader className="flex-shrink-0 pb-2 border-b bg-white">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Bot className="text-blue-600" size={20} />
@@ -215,13 +232,13 @@ export default function AIAssistant({
           </div>
         </CardHeader>
 
-        <CardContent className="flex-1 flex flex-col p-3 space-y-2">
+        <CardContent className="flex-1 flex flex-col p-3 space-y-2 min-h-0 overflow-hidden">
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto space-y-2 scrollbar-thin scrollbar-thumb-gray-300">
+          <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
             {messages.map((message) => (
               <div
                 key={message.id}
-                className={`flex items-start space-x-2 ${
+                className={`flex items-start space-x-2 w-full ${
                   message.role === 'user' ? 'justify-end' : 'justify-start'
                 }`}
               >
@@ -232,13 +249,13 @@ export default function AIAssistant({
                 )}
                 
                 <div
-                  className={`max-w-[80%] p-2 rounded-lg text-sm ${
+                  className={`max-w-[75%] p-2 rounded-lg text-sm break-words overflow-wrap-anywhere ${
                     message.role === 'user'
                       ? 'bg-blue-600 text-white'
                       : 'bg-gray-100 text-gray-900'
                   }`}
                 >
-                  <div>{message.content}</div>
+                  <div className="whitespace-pre-wrap break-words">{message.content}</div>
                   <div className={`text-xs mt-1 ${
                     message.role === 'user' ? 'text-blue-200' : 'text-gray-500'
                   }`}>
@@ -255,12 +272,12 @@ export default function AIAssistant({
             ))}
             
             {isLoading && (
-              <div className="flex items-start space-x-2">
+              <div className="flex items-start space-x-2 w-full justify-start">
                 <div className="flex-shrink-0 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
                   <Bot size={12} className="text-blue-600" />
                 </div>
                 <div className="bg-gray-100 p-2 rounded-lg">
-                  <Loader2 size={16} className="animate-spin" />
+                  <Loader2 size={16} className="animate-spin text-gray-600" />
                 </div>
               </div>
             )}
@@ -290,7 +307,7 @@ export default function AIAssistant({
           )}
 
           {/* Input */}
-          <div className="flex-shrink-0 flex space-x-2">
+          <div className="flex-shrink-0 flex space-x-2 border-t pt-2 bg-white">
             <input
               ref={inputRef}
               type="text"
@@ -298,7 +315,7 @@ export default function AIAssistant({
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
               placeholder="Digite sua pergunta..."
-              className="flex-1 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="flex-1 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
               disabled={isLoading}
             />
             <Button
@@ -316,6 +333,7 @@ export default function AIAssistant({
           </div>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </>
   );
 }

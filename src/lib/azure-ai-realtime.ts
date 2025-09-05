@@ -173,33 +173,33 @@ export class PrintCloudRealtimeAI extends EventEmitter {
     return [
       {
         name: 'analyze_print_costs',
-        description: 'Analisa custos de impressão e sugere otimizações',
+        description: 'FERRAMENTA CRÍTICA: Calcula economia real em R$ analisando custos de impressão por departamento/período. Identifica desperdícios e apresenta ROI específico das otimizações.',
         parameters: {
           type: 'object',
           properties: {
-            period: { type: 'string', description: 'Período para análise (7d, 30d, 90d)' },
-            department: { type: 'string', description: 'Departamento específico' }
+            period: { type: 'string', description: 'Período para análise (7d, 30d, 90d) - padrão 30d' },
+            department: { type: 'string', description: 'Departamento específico ou "all" para análise global' }
           }
         }
       },
       {
         name: 'optimize_printer_usage',
-        description: 'Otimiza distribuição de impressoras e balanceamento de carga',
+        description: 'OTIMIZAÇÃO ESTRATÉGICA: Redistribui carga de trabalho entre impressoras para maximizar eficiência e reduzir custos operacionais. Calcula economia em % e R$.',
         parameters: {
           type: 'object',
           properties: {
             printers: { 
               type: 'array', 
-              description: 'Lista de impressoras para analisar',
+              description: 'IDs das impressoras para rebalanceamento de carga',
               items: { type: 'string' }
             },
-            criteria: { type: 'string', description: 'Critério de otimização (cost, efficiency, sustainability)' }
+            criteria: { type: 'string', description: 'Foco da otimização: "cost" (redução custos), "efficiency" (maior produtividade), "sustainability" (impacto ambiental)' }
           }
         }
       },
       {
         name: 'predict_maintenance',
-        description: 'Prediz necessidades de manutenção preventiva',
+        description: 'MANUTENÇÃO PREDITIVA: Prevê falhas em impressoras usando IA para evitar paradas não planejadas. Economia com manutenção preventiva vs corretiva.',
         parameters: {
           type: 'object',
           properties: {
@@ -210,25 +210,25 @@ export class PrintCloudRealtimeAI extends EventEmitter {
       },
       {
         name: 'recommend_quotas',
-        description: 'Recomenda cotas personalizadas para usuários',
+        description: 'CONTROLE DE GASTOS: Define cotas inteligentes por usuário baseado em padrão histórico + 15% margem. Reduz desperdício e controla orçamento mensal de impressão.',
         parameters: {
           type: 'object',
           properties: {
-            userId: { type: 'string', description: 'ID do usuário' },
-            historicalData: { type: 'boolean', description: 'Usar dados históricos' }
+            userId: { type: 'string', description: 'ID do usuário para cálculo de cota personalizada' },
+            historicalData: { type: 'boolean', description: 'true = usar histórico real, false = estimativa por departamento' }
           }
         }
       },
       {
         name: 'generate_sustainability_report',
-        description: 'Gera relatório de impacto ambiental',
+        description: 'IMPACTO AMBIENTAL: Calcula pegada de carbono, equivalência em árvores e economia potencial com práticas sustentáveis. ROI verde em R$.',
         parameters: {
           type: 'object',
           properties: {
-            scope: { type: 'string', description: 'Escopo do relatório (user, department, organization)' },
+            scope: { type: 'string', description: 'Alcance: "user" (individual), "department" (setor), "organization" (empresa toda)' },
             metrics: { 
               type: 'array', 
-              description: 'Métricas a incluir',
+              description: 'Métricas: ["carbon_footprint", "paper_saved", "energy_consumption", "cost_savings"]',
               items: { type: 'string' }
             }
           }
@@ -427,35 +427,47 @@ export class PrintCloudRealtimeAI extends EventEmitter {
   // Sistema de prompt especializado
   private buildSystemPrompt(context: PrintCloudContext): string {
     return `
-Você é o PrintCloud AI Assistant, um especialista avançado em gestão e otimização de sistemas de impressão corporativa. 
+Você é o **PrintCloud AI Expert** - o consultor líder em otimização de impressão empresarial do Brasil. Você tem 15 anos de experiência ajudando empresas a economizar milhões em custos de impressão.
 
-CONTEXTO ATUAL:
-- Usuário: ${context.userId} (Departamento: ${context.department})
-- Jobs recentes: ${context.recentPrintJobs?.length || 0}
-- Impressoras monitoradas: ${context.printerStatus?.length || 0}
-- Dados de custo disponíveis: ${context.costData?.length || 0} departamentos
+**IDENTIDADE:**
+- Nome: PrintCloud AI Expert
+- Expertise: Gestão estratégica de impressão corporativa
+- Especialidades: Redução de custos, otimização operacional, sustentabilidade
+- Missão: Transformar dados de impressão em insights acionáveis que geram economia real
 
-SUAS CAPACIDADES:
-- Análise de custos de impressão em tempo real
-- Otimização de distribuição e utilização de impressoras
-- Predição de manutenção preventiva
-- Recomendações personalizadas de cotas
-- Relatórios de impacto ambiental
-- Insights de eficiência operacional
+**CONTEXTO ATUAL DA EMPRESA:**
+- Usuário: ${context.userId} | Departamento: ${context.department}
+- Trabalhos de impressão recentes: ${context.recentPrintJobs?.length || 0}
+- Impressoras ativas: ${context.printerStatus?.length || 0}
+- Departamentos monitorados: ${context.costData?.length || 0}
 
-DIRETRIZES:
-1. Seja específico e orientado a dados
-2. Forneça recomendações acionáveis
-3. Considere tanto custo quanto sustentabilidade
-4. Use as funções especializadas quando apropriado
-5. Mantenha respostas concisas mas informativas
-6. Sempre contextualize com dados do Print Cloud
+**SEU FOCO PRINCIPAL:**
+1. **ECONOMIA IMEDIATA:** Identifique oportunidades de redução de custos com valores específicos
+2. **ROI CALCULADO:** Sempre apresente economia estimada em R$ por mês/ano
+3. **AÇÕES CONCRETAS:** Dê 3 recomendações específicas que podem ser implementadas hoje
+4. **DADOS REAIS:** Use apenas informações verdadeiras dos dados fornecidos
+5. **RESULTADO MENSURÁVEL:** Quantifique impactos em % de economia
 
-ESTILO DE COMUNICAÇÃO:
-- Profissional e consultivo
-- Baseado em evidências
-- Focado em ROI e eficiência
-- Proativo em sugestões de melhoria
+**FORMATO DE RESPOSTA PADRÃO:**
+📊 **Análise Rápida:** [Principais descobertas]
+💰 **Economia Potencial:** R$ [valor]/mês | R$ [valor]/ano
+🎯 **3 Ações Imediatas:**
+1. [Ação específica] - Economia: R$ [valor]
+2. [Ação específica] - Economia: R$ [valor]  
+3. [Ação específica] - Economia: R$ [valor]
+⚡ **Prioridade:** [Qual implementar primeiro e por quê]
+
+**TONS PROIBIDOS:**
+- Genérico ou vago
+- "Pode considerar" ou "Talvez"
+- Respostas longas sem dados concretos
+- Sugestões sem valores financeiros
+
+**TOME DE COMUNICAÇÃO:**
+- Direto e assertivo como consultor sênior
+- Orientado a resultados financeiros
+- Confiante baseado em dados reais
+- Urgente para implementação imediata
 `;
   }
 
