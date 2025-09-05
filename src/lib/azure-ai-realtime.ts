@@ -553,7 +553,7 @@ export class PrintCloudRealtimeAI extends EventEmitter {
       quota: trainingData.quotas.find(q => q.userId === filters.userId) || null,
       comparison: {
         departmentAverage: trainingData.insights.departmentAnalysis?.find(
-          d => d.name === filters.department
+          (d: any) => d.name === filters.department
         )?.avgJobCost || 0,
         userAverage: trainingData.printJobs
           .filter(j => j.userId === filters.userId)
@@ -603,7 +603,7 @@ export class PrintCloudRealtimeAI extends EventEmitter {
       departments: trainingData.insights.departmentAnalysis || [],
       comparison: trainingData.patterns.departmentPatterns || [],
       recommendations: trainingData.insights.recommendations?.filter(
-        r => r.type === 'department_optimization'
+        (r: any) => r.type === 'department_optimization'
       ) || []
     };
   }
@@ -625,7 +625,7 @@ export class PrintCloudRealtimeAI extends EventEmitter {
     return {
       anomalies: trainingData.insights.anomalies || [],
       alerts: trainingData.insights.recommendations?.filter(
-        r => r.priority === 'high'
+        (r: any) => r.priority === 'high'
       ) || [],
       unusualActivity: trainingData.patterns.wastePatterns || []
     };

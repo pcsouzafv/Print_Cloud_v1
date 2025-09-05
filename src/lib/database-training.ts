@@ -124,11 +124,6 @@ export class DatabaseTrainingService {
               email: true
             }
           },
-          _count: {
-            select: {
-              managedDepartments: true
-            }
-          }
         }
       });
 
@@ -202,7 +197,7 @@ export class DatabaseTrainingService {
       userPatterns: this.analyzeByUser(printJobs, users),
       
       // Padrões por impressora
-      printerPatterns: this.analyzeByPrinter(printJobs, printers),
+      printerPatterns: this.analyzeByPrinterUsage(printJobs, printers),
       
       // Padrões temporais
       timePatterns: this.analyzeTimePatterns(printJobs),
@@ -323,6 +318,25 @@ export class DatabaseTrainingService {
     });
   }
 
+  private analyzeByPrinterUsage(printJobs: any[], printers: any[]) {
+    return printers.map(printer => {
+      const printerJobs = printJobs.filter(job => job.printerId === printer.id);
+      const totalPages = printerJobs.reduce((sum, job) => sum + (job.pages * job.copies), 0);
+      const totalCost = printerJobs.reduce((sum, job) => sum + job.cost, 0);
+      
+      return {
+        printerId: printer.id,
+        name: printer.name,
+        department: printer.department,
+        totalJobs: printerJobs.length,
+        totalPages,
+        totalCost,
+        utilization: printerJobs.length > 100 ? 'HIGH' : printerJobs.length > 50 ? 'MEDIUM' : 'LOW',
+        avgJobSize: totalPages / printerJobs.length || 0
+      };
+    });
+  }
+
   private analyzeTimePatterns(printJobs: any[]) {
     const hourlyStats: { [key: number]: number } = {};
     const dailyStats: { [key: number]: number } = {};
@@ -414,7 +428,7 @@ export class DatabaseTrainingService {
 
   // Detectar anomalias
   private detectAnomalies(printJobs: any[], users: any[]) {
-    const anomalies = [];
+    const anomalies: any[] = [];
     
     // Usuários com uso muito acima da média
     const avgJobsPerUser = printJobs.length / users.length;
@@ -436,7 +450,7 @@ export class DatabaseTrainingService {
 
   // Gerar recomendações inteligentes
   private generateRecommendations(printJobs: any[], users: any[], printers: any[], departments: any[]) {
-    const recommendations = [];
+    const recommendations: any[] = [];
     
     // Recomendação de economia com duplex
     const singleSidedJobs = printJobs.filter(job => job.pages > 1);
