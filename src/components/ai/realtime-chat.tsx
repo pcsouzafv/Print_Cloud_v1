@@ -306,24 +306,52 @@ export default function RealtimeChat({ userId, department, onActionRequired }: R
     }
   };
 
+  const clearChat = () => {
+    setMessages([
+      {
+        id: 'welcome',
+        role: 'system',
+        content: '🤖 Print Cloud AI está online! Como posso ajudá-lo a otimizar seu ambiente de impressão hoje?',
+        timestamp: new Date()
+      }
+    ]);
+    setInputValue('');
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsStreaming(false);
+  };
+
   return (
-    <Card className="flex flex-col h-[600px]">
-      <CardHeader className="pb-4">
+    <Card className="flex flex-col h-[600px] max-h-[80vh]">
+      <CardHeader className="pb-4 flex-shrink-0">
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <Brain className="text-blue-600" size={20} />
             <span>Print Cloud AI - Tempo Real</span>
           </div>
-          <div className="flex items-center space-x-2 text-sm">
-            {getStatusIcon()}
-            <span className="text-gray-600">{getStatusText()}</span>
+          <div className="flex items-center space-x-3">
+            <Button
+              onClick={clearChat}
+              variant="outline"
+              size="sm"
+              disabled={isStreaming}
+              className="text-xs"
+            >
+              Novo Chat
+            </Button>
+            <div className="flex items-center space-x-2 text-sm">
+              {getStatusIcon()}
+              <span className="text-gray-600">{getStatusText()}</span>
+            </div>
           </div>
         </CardTitle>
       </CardHeader>
 
-      <CardContent className="flex-1 flex flex-col p-0">
+      <CardContent className="flex-1 flex flex-col p-0 min-h-0">
         {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto px-4 space-y-4">
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
           {messages.map((message) => (
             <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div className={`flex space-x-2 max-w-[80%] ${message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
@@ -372,7 +400,7 @@ export default function RealtimeChat({ userId, department, onActionRequired }: R
         </div>
 
         {/* Input Area */}
-        <div className="border-t p-4">
+        <div className="border-t p-4 flex-shrink-0 bg-white">
           <div className="flex space-x-2">
             <textarea
               value={inputValue}
