@@ -188,7 +188,11 @@ export class PrintCloudRealtimeAI extends EventEmitter {
         parameters: {
           type: 'object',
           properties: {
-            printers: { type: 'array', description: 'Lista de impressoras para analisar' },
+            printers: { 
+              type: 'array', 
+              description: 'Lista de impressoras para analisar',
+              items: { type: 'string' }
+            },
             criteria: { type: 'string', description: 'Critério de otimização (cost, efficiency, sustainability)' }
           }
         }
@@ -222,7 +226,11 @@ export class PrintCloudRealtimeAI extends EventEmitter {
           type: 'object',
           properties: {
             scope: { type: 'string', description: 'Escopo do relatório (user, department, organization)' },
-            metrics: { type: 'array', description: 'Métricas a incluir' }
+            metrics: { 
+              type: 'array', 
+              description: 'Métricas a incluir',
+              items: { type: 'string' }
+            }
           }
         }
       }
