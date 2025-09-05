@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getChatCompletion, isAzureAIConfigured } from '@/lib/azure-ai';
 import { getMockChatResponse } from '@/lib/mock-ai';
+import { getMockUserContext, getContextualInsights, MOCK_DATABASE } from '@/lib/mock-database';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,8 +25,23 @@ export async function POST(request: NextRequest) {
       try {
         context = await gatherUserContext(userId);
       } catch (error) {
-        console.warn('Could not gather user context:', error);
+        console.warn('Could not gather user context from database, using mock data:', error);
+        // Use rich mock data when database is not available
+        context = getMockUserContext(userId);
+        (context as any).isSimulated = true;
       }
+    } else if (includeContext) {
+      // Even without userId, provide rich contextual data for better AI analysis
+      context = getMockUserContext();
+      (context as any).isSimulated = true;
+      (context as any).systemOverview = {
+        totalUsers: MOCK_DATABASE.users.length,
+        totalPrinters: MOCK_DATABASE.printers.length,
+        totalDepartments: MOCK_DATABASE.departments.length,
+        monthlyBudget: MOCK_DATABASE.departments.reduce((sum, d) => sum + d.budget, 0),
+        criticalIssues: MOCK_DATABASE.criticalEvents.filter(e => e.severity === 'HIGH').length,
+        insights: getContextualInsights()
+      };
     }
 
     // Get enhanced AI response with business context
@@ -37,7 +53,7 @@ export async function POST(request: NextRequest) {
           userStats: context?.userStats,
           printerStats: context?.printerIssues,
           departmentData: {
-            name: context?.department,
+            name: (context as any)?.departmentData?.name || context?.user?.department,
             quotaUsage: context?.quotaUsage
           },
           costAnalysis: {
@@ -97,7 +113,7 @@ export async function POST(request: NextRequest) {
             colorUsagePercentage: Math.round(context.quotaUsage.colorUsagePercentage)
           } : null,
           printerIssues: context.printerIssues?.length || 0,
-          department: context.department
+          department: (context as any)?.departmentData?.name || context?.user?.department
         } : null
       }
     });
