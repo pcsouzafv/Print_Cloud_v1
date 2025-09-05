@@ -256,7 +256,7 @@ export const MOCK_DATABASE = {
 export function getMockUserContext(userId?: string) {
   const user = MOCK_DATABASE.users.find(u => u.id === userId) || MOCK_DATABASE.users[0];
   const userQuota = MOCK_DATABASE.quotas.find(q => q.userId === userId);
-  const deptCost = MOCK_DATABASE.costAnalysis[user.department];
+  const deptCost = MOCK_DATABASE.costAnalysis[user.department as keyof typeof MOCK_DATABASE.costAnalysis];
   
   return {
     user: {
@@ -302,7 +302,7 @@ export function getMockUserContext(userId?: string) {
 
 // Função para obter insights contextuais
 export function getContextualInsights(department?: string) {
-  const deptData = department ? MOCK_DATABASE.costAnalysis[department] : null;
+  const deptData = department ? MOCK_DATABASE.costAnalysis[department as keyof typeof MOCK_DATABASE.costAnalysis] : null;
   const deptPrinters = MOCK_DATABASE.printers.filter(p => p.department === department);
   const deptEvents = MOCK_DATABASE.criticalEvents.filter(e => e.department === department);
   
